@@ -42,7 +42,7 @@
     *   Эксперименты с архитектурами и гиперпараметрами.
 
 6.  **Создание сервиса**
-    *   Разработка API (FastAPI DDD).
+    *   Разработка API (FastAPI).
     *   Имплементация лучшей ML-модели в сервис.
 
 7.  **Продвинутые DL-модели**
@@ -59,4 +59,4 @@
 
 *   **Язык:** Python 3.x
 *   **Библиотеки:** Pandas, Scikit-learn, PyTorch/TensorFlow, Transformers
-*   **Сервис:** FastAPI DDD, Telegram
+*   **Сервис:** FastAPI, Telegram
