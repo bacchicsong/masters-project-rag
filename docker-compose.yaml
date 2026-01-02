@@ -12,8 +12,7 @@ services:
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
       - QDRANT_COLLECTION_NAME=definitions
-      - API_LOGIN=${API_LOGIN}
-      - API_ACESS_TOKEN=${API_ACESS_TOKEN}
+      - API_ACESS_TOKEN=${GIGACHAT_AUTH_KEY}
     volumes:
       - ./data:/app/data
     env_file:
