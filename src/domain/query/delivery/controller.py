@@ -46,14 +46,6 @@ async def get_history(
 ) -> HistoryResponseDTO:
     return service.history
 
-@router.get("/history")
-async def clear_history(
-    token: str = Depends(verify_token),
-    service: IQueryUsecase = Depends(get_query_usecase)
-) -> dict[str, str]:
-    service.history.clear()
-    return {"details": "History has been successfully cleared"}
-
 @router.get("/stats")
 async def get_stats(
     token: str = Depends(verify_token),
