@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     QDRANT_COLLECTION_NAME: str = "definitions"
     MODEL_NAME: str = "sberbank-ai/sbert_large_nlu_rus"
     LLM_MODEL: str = "cointegrated/rut5-base-absum"
+    GIGACHAT_AUTH_KEY: str
 
     class Config:
         env_file = ".env"
