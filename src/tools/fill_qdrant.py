@@ -6,7 +6,17 @@ from config.config import config
 
 def load_json_files(directory: str) -> list[dict[str, str]]:
     json_dir = Path(directory)
-    return [json.loads(f.read_text(encoding="utf-8")) for f in json_dir.glob("*.json")]
+    all_docs = []
+    for file in json_dir.glob("*.json"):
+        with file.open("r", encoding="utf-8") as f:
+            docs = json.load(f)
+            if isinstance(docs, dict):
+                all_docs.append(docs)
+            elif isinstance(docs, list):
+                all_docs.extend(docs)
+            else:
+                raise ValueError(f"Unsupported file format in {file.name}")
+    return all_docs
 
 def run():
     qdrant = init_qdrant()
