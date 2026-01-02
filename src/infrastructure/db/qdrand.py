@@ -12,7 +12,7 @@ EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12
 def get_embedded_model() -> SentenceTransformer:
     return SentenceTransformer(EMBEDDING_MODEL_NAME)
 
-def init_qdrant() -> QdrantClient:
+def init_qdrant(logger) -> QdrantClient:
     global collection_exists
     qdrant = QdrantClient(
         url=f"http://{config.QDRANT_HOST}:{config.QDRANT_PORT}",
@@ -26,6 +26,7 @@ def init_qdrant() -> QdrantClient:
                 vectors_config=VectorParams(size=384, distance=Distance.COSINE)
             )
             collection_exists = True
+            logger.info('Новая коллекция была создана')
     return qdrant
 
 def insert_document(qdrant: QdrantClient, collection_name: str, doc: dict, idx: int):

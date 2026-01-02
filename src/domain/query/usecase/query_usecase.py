@@ -24,14 +24,15 @@ class QueryUsecase(IQueryUsecase):
         return self.model.encode(query_topic)
 
     def _private_method_2_used_in_processes_query_method(self, embedding):
-        if not embedding:
+        if embedding is None:
             raise TypeError("Embedding cannot be None.")
-        results = self.qdrant.search(
+        results = self.qdrant.query_points(
             collection_name=self.collections_name,
-            query_vector=embedding,
+            query=embedding,
             limit=3,
         )
-        return [res.payload for res in results]
+        self.logger.info(f"Результат поиска: {results.points}")
+        return [res.payload for res in results.points]
 
     async def _private_method_3_used_in_processes_query_method(self, nearests_texts, query_topic):
         context = "\n".join([f"{doc['title']}: {doc['url']}" for doc in nearests_texts])

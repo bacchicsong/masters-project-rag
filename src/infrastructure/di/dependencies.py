@@ -32,3 +32,4 @@ def get_query_usecase(
     logger: logging.Logger = Depends(get_logger),
 ) -> IQueryUsecase:
     return QueryUsecase(qdrant, logger)
+
