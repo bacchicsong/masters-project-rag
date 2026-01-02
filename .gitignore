@@ -5,5 +5,7 @@ __pycache__
 /.ipynb_checkpoints/
 environment_local
 *joblib*
+env
 .env
-*.env*
+.env.*
+*.env
