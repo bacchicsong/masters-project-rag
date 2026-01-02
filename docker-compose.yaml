@@ -1,13 +1,41 @@
+services:
+  app:
+    build:
+      context: src
+      dockerfile: Dockerfile
+    container_name: fastapi_app
+    ports:
+      - "8088:8088"
+    environment:
+      - APP_HOST=0.0.0.0
+      - APP_PORT=8088
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - QDRANT_COLLECTION_NAME=definitions
+      - API_ACESS_TOKEN=${API_ACESS_TOKEN}
+    volumes:
+      - ./data:/app/data
+    env_file:
+      - .env
+    working_dir: /app
+    depends_on:
+      - qdrant
+    networks:
+      - app_network
 
-app:
-  image:python:3.11-slim
-  container_name: fastapi_app
-  working_dir: /app
+  qdrant:
+    image: qdrant/qdrant:v1.16
+    container_name: qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    networks:
+      - app_network
 
-qdrant:
-  image: qdrant/qdrant:v3.8
-  container_name: qdrant
-  ports:
-    - "6333:6333"
-  volumes:
-    - qdrant_storage:/qdrant/storage
+networks:
+  app_network:
+    driver: bridge
+
+volumes:
+  qdrant_storage:
