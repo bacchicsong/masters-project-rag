@@ -6,9 +6,11 @@ from typing import List, Optional, Dict
 class QueryResponseDTO(BaseModel):
     text: str
 
+
 class QueryRequestDTO(BaseModel):
     query_topic: str
     system_prompt: Optional[str] = None
+
 
 class HistoryItemDTO(BaseModel):
     query: str
@@ -16,8 +18,10 @@ class HistoryItemDTO(BaseModel):
     timestamp: datetime
     duration: float
 
+
 class HistoryResponseDTO(BaseModel):
     history: List[HistoryItemDTO]
+
 
 class StatsResponseDTO(BaseModel):
     total_queries: int

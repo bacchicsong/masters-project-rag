@@ -15,4 +15,4 @@ class Settings(BaseSettings):
         env_file = ".env"
 
 
-config = Settings()
+RAG_CONFIG = Settings()
