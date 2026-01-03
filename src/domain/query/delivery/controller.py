@@ -24,6 +24,7 @@ async def forward(
     system_promt: Optional[str] = Form(None),
     service: IQueryUsecase = Depends(get_query_usecase),
 ) -> QueryResponseDTO:
+    _ = token
     try:
         research_results = await service.processes_query(
             Query(
@@ -45,20 +46,27 @@ async def forward(
 
 @router.get("/history")
 async def get_history(
-    token: str = Depends(verify_token),
+    history_depth: int,
     service: IQueryUsecase = Depends(get_query_usecase),
-) -> HistoryResponseDTO:
-    return service.history
+) -> HistoryResponseDTO | dict[str, str]:
+    if not service.history:
+        return {"details": "There is no available history yet"}
+    if len(service.history) <= history_depth:
+        return service.history
+    return service.history[:history_depth]
 
 
 @router.get("/stats")
 async def get_stats(
-    token: str = Depends(verify_token),
+    history_depth: int,
     service: IQueryUsecase = Depends(get_query_usecase),
 ) -> StatsResponseDTO | dict[str, str]:
-    history = service.history
-    if not all(history.values()):
+    if not service.history:
         return {"details": "There is no available history yet"}
+    if len(service.history) <= history_depth:
+        history = service.history
+    else:
+        history = service.history[:history_depth]
 
     durations = [obj["duration"] for obj in history]
     lenghts = [len(obj["query"]) for obj in history]
