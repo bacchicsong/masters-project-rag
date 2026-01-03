@@ -1,4 +1,3 @@
-import logging
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
@@ -19,14 +18,14 @@ def init_qdrant(logger) -> QdrantClient:
         timeout=QDRANT_TIMEOUT,
     )
     collection_name = config.QDRANT_COLLECTION_NAME
+    collection_exists =  qdrant.collection_exists(collection_name=collection_name)
     if not collection_exists:
-        if not qdrant.collection_exists(collection_name=collection_name):
-            qdrant.create_collection(
-                collection_name=collection_name,
-                vectors_config=VectorParams(size=384, distance=Distance.COSINE)
-            )
-            collection_exists = True
-            logger.info('Новая коллекция была создана')
+        qdrant.create_collection(
+            collection_name=collection_name,
+            vectors_config=VectorParams(size=384, distance=Distance.COSINE)
+        )
+        collection_exists = True
+        logger.info(f"Новая коллекция '{collection_name}' была создана")
     return qdrant
 
 def insert_document(qdrant: QdrantClient, collection_name: str, doc: dict, idx: int):

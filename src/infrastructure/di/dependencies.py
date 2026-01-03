@@ -4,7 +4,6 @@ import logging
 from fastapi import Depends, HTTPException
 from qdrant_client import QdrantClient
 
-from config.config import config
 from domain.query.usecase.i_query_usecase import IQueryUsecase
 from domain.query.usecase.query_usecase import QueryUsecase
 from infrastructure.db.qdrand import init_qdrant

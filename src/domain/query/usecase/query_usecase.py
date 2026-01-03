@@ -11,7 +11,6 @@ from infrastructure.db.qdrand import get_embedded_model
 import uuid      
 import json      
 import requests  
-import urllib3   
 
 MAX_TOKENS = 4096 
 
