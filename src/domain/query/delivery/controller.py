@@ -19,7 +19,7 @@ router = APIRouter(prefix="/api/v1")
 
 @router.post("/forward")
 async def forward(
-    query_topic: str,
+    query_topic: str = Form(...),
     token: str = Depends(verify_token),
     system_promt: Optional[str] = Form(None),
     service: IQueryUsecase = Depends(get_query_usecase),

@@ -1,6 +1,5 @@
 import asyncio
 import sys
-import os
 import json
 import urllib3
 from pathlib import Path

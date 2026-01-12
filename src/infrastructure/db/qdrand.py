@@ -1,3 +1,4 @@
+import json
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
 from sentence_transformers import SentenceTransformer
@@ -32,13 +33,10 @@ def init_qdrant(logger) -> QdrantClient:
 
 def insert_document(qdrant: QdrantClient, collection_name: str, doc: dict, idx: int):
     model = get_embedded_model()
-    content = " ".join(doc["content"])
-    sections = "\n".join(
-        f"{sec['heading']}: {' '.join(sec['content'])}"
-        for sec in doc.get("section", [])
-    )
-    text = f"{doc['title']} {content} {sections}"
+    text_representation = json.dumps(doc, ensure_ascii=False)
+    payload = doc.copy()
+    payload['text'] = text_representation 
+    vector = model.encode(text_representation).tolist()
 
-    embedding = model.encode(text)
-    point = PointStruct(id=idx, vector=embedding.tolist(), payload=doc)
+    point = PointStruct(id=idx, vector=vector, payload=payload)
     qdrant.upsert(collection_name=collection_name, points=[point])
