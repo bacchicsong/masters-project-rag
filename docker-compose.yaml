@@ -1,0 +1,64 @@
+services:
+  app:
+    build:
+      context: src
+      dockerfile: Dockerfile
+    container_name: fastapi_app
+    ports:
+      - "8088:8088"
+    environment:
+      - APP_HOST=0.0.0.0
+      - APP_PORT=8088
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - QDRANT_COLLECTION_NAME=definitions
+      - API_ACESS_TOKEN=${GIGACHAT_AUTH_KEY}
+    volumes:
+      - ./data:/app/data
+    env_file:
+      - .env
+    working_dir: /app
+    depends_on:
+      - qdrant
+    networks:
+      - app_network
+
+  qdrant:
+    image: qdrant/qdrant:v1.16
+    container_name: qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    env_file:
+      - .env
+    networks:
+      - app_network
+
+
+  loader:
+    build:
+      context: src
+      dockerfile: Dockerfile
+    command: ["python", "/app/tools/fill_qdrant.py"]
+    environment:
+      - PYTHONPATH=/app
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - QDRANT_COLLECTION_NAME=definitions
+      - API_ACESS_TOKEN=${GIGACHAT_AUTH_KEY}
+    volumes:
+        - ./data:/app/data
+    depends_on:
+      - qdrant
+    env_file:
+      - .env
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
+
+volumes:
+  qdrant_storage:
