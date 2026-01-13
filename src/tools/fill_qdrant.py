@@ -25,7 +25,6 @@ def load_json_files(directory: str) -> list[dict[str, str]]:
 
     return all_docs
 
-
 def run():
     logger = get_logger()
     qdrant = init_qdrant(logger)

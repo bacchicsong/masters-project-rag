@@ -19,9 +19,9 @@ router = APIRouter(prefix="/api/v1")
 
 @router.post("/forward")
 async def forward(
-    query_topic: str = Form(...),
-    token: str = Depends(verify_token),
+    query_topic: str,
     system_promt: Optional[str] = Form(None),
+    token: str = Depends(verify_token),
     service: IQueryUsecase = Depends(get_query_usecase),
 ) -> QueryResponseDTO:
     _ = token
@@ -46,7 +46,7 @@ async def forward(
 
 @router.get("/history")
 async def get_history(
-    history_depth: int,
+    history_depth: int = Form(...),
     service: IQueryUsecase = Depends(get_query_usecase),
 ) -> HistoryResponseDTO | dict[str, str]:
     if not service.history:
@@ -58,7 +58,7 @@ async def get_history(
 
 @router.get("/stats")
 async def get_stats(
-    history_depth: int,
+    history_depth: int = Form(...),
     service: IQueryUsecase = Depends(get_query_usecase),
 ) -> StatsResponseDTO | dict[str, str]:
     if not service.history:
