@@ -28,3 +28,14 @@ class StatsResponseDTO(BaseModel):
     mean_time: float
     quantiles: Dict[str, float]
     query_stats: Dict[str, float]
+
+
+class FeedbackRequestDTO(BaseModel):
+    query_id: str
+    liked: bool
+    relevant_doc_ids: Optional[List[int]] = None
+
+
+class FeedbackResponseDTO(BaseModel):
+    status: str
+    triplet_count: int

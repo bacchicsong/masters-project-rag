@@ -1,13 +1,19 @@
 import json
+import os
+from pathlib import Path
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
 from sentence_transformers import SentenceTransformer, InputExample
+from sentence_transformers import losses
+from torch.utils.data import DataLoader
 
 from config.config import RAG_CONFIG
 from tools.fill_qdrant import load_json_files
 
 QDRANT_TIMEOUT = 180
 EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+FINE_TUNED_MODEL_PATH = str(Path(__file__).parent.parent.parent / "models" / "fine_tuned_bi_encoder")
+USE_FINE_TUNED = True
 
 def chunk_text(text, size=100, overlap=20):
     words = text.split()
@@ -27,6 +33,10 @@ def get_train_examples():
 
 
 def get_embedded_model() -> SentenceTransformer:
+    if USE_FINE_TUNED and os.path.isdir(FINE_TUNED_MODEL_PATH):
+        model = SentenceTransformer(FINE_TUNED_MODEL_PATH)
+        return model
+
     train_examples = get_train_examples()
     model = SentenceTransformer(EMBEDDING_MODEL_NAME)
     train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=32)
@@ -35,7 +45,7 @@ def get_embedded_model() -> SentenceTransformer:
         train_objectives=[(train_dataloader, train_loss)],
         epochs=2,
         warmup_steps=100,
-        output_path="./fine_tuned_model"
+        output_path=FINE_TUNED_MODEL_PATH
     )
     return model
 

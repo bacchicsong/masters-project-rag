@@ -1,4 +1,5 @@
-from typing import Optional
+import uuid
+from typing import Optional, List
 
 
 class Query:
@@ -17,5 +18,7 @@ class Query:
 
 
 class QueryResults:
-    def __init__(self, text):
+    def __init__(self, text, query_id: str = None, retrieved_doc_ids: List[int] = None):
         self.text = text
+        self.query_id = query_id or str(uuid.uuid4())
+        self.retrieved_doc_ids = retrieved_doc_ids or []

@@ -7,6 +7,8 @@ from domain.query.delivery.dto.dto import (
     QueryResponseDTO,
     HistoryResponseDTO,
     StatsResponseDTO,
+    FeedbackRequestDTO,
+    FeedbackResponseDTO,
 )
 from domain.query.query import Query
 from domain.query.usecase.i_query_usecase import IQueryUsecase
@@ -96,3 +98,21 @@ async def get_stats(
 @router.post("/health")
 async def health_check() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@router.post("/feedback")
+async def submit_feedback(
+    feedback: FeedbackRequestDTO,
+    service: IQueryUsecase = Depends(get_query_usecase),
+) -> FeedbackResponseDTO:
+    """Accept user feedback on a query response and store triplet for fine-tuning."""
+    try:
+        count = service.save_feedback(feedback)
+        return FeedbackResponseDTO(
+            status="ok",
+            triplet_count=count,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error processing feedback: {e}"
+        )
