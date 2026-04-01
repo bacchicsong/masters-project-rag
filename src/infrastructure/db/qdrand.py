@@ -1,16 +1,43 @@
 import json
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, InputExample
 
 from config.config import RAG_CONFIG
+from tools.fill_qdrant import load_json_files
 
 QDRANT_TIMEOUT = 180
 EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 
+def chunk_text(text, size=100, overlap=20):
+    words = text.split()
+    chunks = []
+    for i in range(0, len(words), size - overlap):
+        chunks.append(" ".join(words[i:i+size]))
+    return chunks
+
+def get_train_examples():
+    train_examples = []
+    texts = load_json_files("data")
+    for doc in texts:
+        chunks = chunk_text(doc)
+        for i in range(len(chunks) - 1):
+            train_examples.append(InputExample(texts=[chunks[i], chunks[i+1]]))
+    return train_examples
+
 
 def get_embedded_model() -> SentenceTransformer:
-    return SentenceTransformer(EMBEDDING_MODEL_NAME)
+    train_examples = get_train_examples()
+    model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+    train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=32)
+    train_loss = losses.CosineSimilarityLoss(model)
+    model.fit(
+        train_objectives=[(train_dataloader, train_loss)],
+        epochs=2,
+        warmup_steps=100,
+        output_path="./fine_tuned_model"
+    )
+    return model
 
 
 def init_qdrant(logger) -> QdrantClient:
@@ -33,10 +60,10 @@ def init_qdrant(logger) -> QdrantClient:
 
 def insert_document(qdrant: QdrantClient, collection_name: str, doc: dict, idx: int):
     model = get_embedded_model()
-    text_representation = json.dumps(doc, ensure_ascii=False)
+    text_representation = " ".join([f"{k}: {v}" for k, v in doc.items()])
     payload = doc.copy()
     payload['text'] = text_representation 
-    vector = model.encode(text_representation).tolist()
+    vector = model.encode(text_representation, normalize_embeddings=True, ).tolist()
 
     point = PointStruct(id=idx, vector=vector, payload=payload)
     qdrant.upsert(collection_name=collection_name, points=[point])
