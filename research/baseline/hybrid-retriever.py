@@ -10,7 +10,7 @@ from functools import wraps
 from typing import List, Dict, Callable, Optional
 import numpy as np
 from rank_bm25 import BM25Okapi
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, CrossEncoder
 import os
 
 
@@ -26,11 +26,16 @@ CONFIG = {
     
     # Параметры модели
     'model_name': 'intfloat/multilingual-e5-small',
+    'cross_encoder_model': 'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1',
     'strategy': 'full',  # 'full', 'title_headings', 'title_only'
     
     # Параметры поиска
     'bm25_k': 50,  # Количество кандидатов после BM25
+    'bi_encoder_k': 20,  # Кандидаты после bi-encoder для cross-encoder
     'top_k': 10,   # Финальное количество результатов
+    
+    # Параметры кросс-энкодера
+    'use_cross_encoder': True,
     
     # Параметры оценки
     'eval_ks': [1, 3, 5, 8],  # K для метрик P@k, R@k
@@ -213,27 +218,65 @@ class DataLoader:
 
 
 # ============================================================================
+# КРОСС-ЭНКОДЕР РЕРАНКЕР
+# ============================================================================
+
+class CrossEncoderReranker:
+    """Кросс-энкодер для переранжирования кандидатов"""
+    
+    def __init__(self, model_name: str = 'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1'):
+        self.model = CrossEncoder(model_name)
+    
+    @Utils.measure_performance
+    def rerank(self, query: str, candidate_texts: List[str], top_k: int) -> List[int]:
+        """
+        Переранжирование кандидатов через кросс-энкодер
+        
+        Args:
+            query: запрос
+            candidate_texts: тексты кандидатов
+            top_k: количество лучших результатов
+            
+        Returns:
+            индексы лучших кандидатов в порядке убывания релевантности
+        """
+        if not candidate_texts:
+            return []
+        
+        pairs = [[query, text] for text in candidate_texts]
+        scores = self.model.predict(pairs)
+        
+        ranked_indices = np.argsort(scores)[::-1][:top_k]
+        return ranked_indices.tolist()
+
+
+# ============================================================================
 # ГИБРИДНЫЙ РЕТРИВЕР
 # ============================================================================
 
 class HybridRetriever:
-    """Гибридный поисковый движок: BM25 + Bi-encoder"""
+    """Гибридный поисковый движок: BM25 → Bi-encoder → Cross-encoder"""
     
     def __init__(self,
                  docs: List[dict],
                  model_name: str = 'intfloat/multilingual-e5-small',
+                 cross_encoder_model: str = 'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1',
                  strategy: str = 'full',
+                 use_cross_encoder: bool = False,
                  show_debug: bool = True):
         """
         Args:
             docs: список документов
             model_name: название модели для эмбеддингов
+            cross_encoder_model: модель кросс-энкодера
             strategy: стратегия извлечения текста
+            use_cross_encoder: использовать ли cross-encoder
             show_debug: показывать отладочную информацию
         """
         self.docs = docs
         self.doc_processor = DocumentProcessor()
         self.strategy = strategy
+        self.use_cross_encoder = use_cross_encoder
         self.show_debug = show_debug
         
         # Извлекаем тексты из документов
@@ -250,11 +293,15 @@ class HybridRetriever:
         # Инициализация Bi-encoder
         self.model = SentenceTransformer(model_name)
         self.embeddings = None
+        
+        # Инициализация Cross-encoder
+        self.cross_encoder = CrossEncoderReranker(cross_encoder_model) if use_cross_encoder else None
     
     def _print_debug_info(self):
         """Печать отладочной информации"""
         print(f"📄 Загружено документов: {len(self.docs)}")
         print(f"📝 Стратегия: {self.strategy}")
+        print(f"🔄 Cross-encoder: {'включен' if self.use_cross_encoder else 'выключен'}")
     
         # Показываем примеры документов
         for i, (doc, text) in enumerate(zip(self.docs[:3], self.texts[:3])):
@@ -280,22 +327,22 @@ class HybridRetriever:
     @Utils.measure_performance
     def search(self, 
                query: str, 
-               bm25_k: int = 1000, 
-               top_k: int = 100) -> List[int]:
+               bm25_k: int = 50,
+               bi_encoder_k: int = 20,
+               top_k: int = 10) -> List[int]:
         """
-        Двухэтапный поиск
+        Трёхэтапный поиск: BM25 → Bi-encoder → Cross-encoder
         
         Args:
             query: поисковый запрос
             bm25_k: количество кандидатов после BM25
+            bi_encoder_k: количество кандидатов после bi-encoder (для cross-encoder)
             top_k: финальное количество результатов
             
         Returns:
             список индексов найденных документов
         """
-        # Защита от слишком большого bm25_k
         bm25_k = min(bm25_k, len(self.docs))
-        top_k = min(top_k, bm25_k)
         
         # Stage 1: BM25
         scores_bm25 = self.bm25.get_scores(query.lower().split())
@@ -304,9 +351,22 @@ class HybridRetriever:
         # Stage 2: Bi-encoder rerank
         q_emb = self.model.encode([query], normalize_embeddings=True)
         scores = self.embeddings[candidates] @ q_emb.T
-        reranked = candidates[np.argsort(scores.flatten())[::-1][:top_k]]
+        reranked = candidates[np.argsort(scores.flatten())[::-1]]
         
-        return reranked.tolist()
+        if self.use_cross_encoder and self.cross_encoder:
+            # Stage 3: Cross-encoder rerank
+            bi_encoder_k = min(bi_encoder_k, len(reranked))
+            top_candidates = reranked[:bi_encoder_k]
+            candidate_texts = [self.texts[idx] for idx in top_candidates]
+            
+            cross_top_k = min(top_k, len(candidate_texts))
+            ce_ranked = self.cross_encoder.rerank(query, candidate_texts, cross_top_k)
+            
+            final_results = [top_candidates[i] for i in ce_ranked]
+        else:
+            final_results = reranked[:top_k].tolist()
+        
+        return final_results
     
     def get_doc_title(self, idx: int) -> str:
         """Получить заголовок документа по индексу"""
@@ -468,40 +528,37 @@ class ExperimentRunner:
 # MAIN
 # ============================================================================
 
+def main():
+    """Главная функция"""
+    # Инициализация эксперимента
+    runner = ExperimentRunner(CONFIG)
 
-"""Главная функция"""
+    # Загрузка данных
+    runner.load_data()
 
-# Инициализация эксперимента
-runner = ExperimentRunner(CONFIG)
+    # Инициализация ретривера
+    runner.initialize_retriever()
 
-# Загрузка данных
-runner.load_data()
+    # Тестовый запрос
+    test_query = "Как перекинуть деньги со счёта у брокера на мой накопительный счёт?"
+    runner.test_single_query(test_query, top_n=5)
 
-# Инициализация ретривера
-runner.initialize_retriever()
+    # Дополнительные тестовые запросы
+    test_queries = [
+        "Как оценить финансовое состояние компании?",
+        "Что такое дивидендная стратегия инвестирования?",
+        "Как работает реинвестирование дивидендов?",
+        "Что такое суверенные и корпоративные облигации?",
+        "Как выбрать надежного брокера?",
+        "Что такое ликвидность ценных бумаг?",
+        "Как рассчитать доходность инвестиций?",
+        "Что такое комиссия за обслуживание брокерского счета?",
+        "Как работают голубые фишки и акции роста?",
+        "Что такое дробление акций (сплит)?",
+    ]
 
-# Тестовый запрос
-test_query = "Как перекинуть деньги со счёта у брокера на мой накопительный счёт?"
-runner.test_single_query(test_query, top_n=5)
+    runner.test_multiple_queries(test_queries, top_n=3)
 
-# Дополнительные тестовые запросы
-test_queries = [
-    "Как оценить финансовое состояние компании?",
-    "Что такое дивидендная стратегия инвестирования?",
-    "Как работает реинвестирование дивидендов?",
-    "Что такое суверенные и корпоративные облигации?",
-    "Как выбрать надежного брокера?",
-    "Что такое ликвидность ценных бумаг?",
-    "Как рассчитать доходность инвестиций?",
-    "Что такое комиссия за обслуживание брокерского счета?",
-    "Как работают голубые фишки и акции роста?",
-    "Что такое дробление акций (сплит)?",
-]
 
-runner.test_multiple_queries(test_queries, top_n=3)
-
-# Раскомментируйте для оценки на тестовых данных с метриками
-# test_data = [
-#     {"query": "Где хранятся мои акции?", "relevant_ids": [1, 5, 10]},
-# ]
-# runner.evaluate_test_data(test_data)
+if __name__ == "__main__":
+    main()

@@ -1,5 +1,6 @@
 import time
 from qdrant_client import QdrantClient
+from sentence_transformers import CrossEncoder
 
 from domain.query.query import Query, QueryResults
 from domain.query.delivery.dto.dto import HistoryResponseDTO
@@ -12,6 +13,9 @@ import json
 import requests
 
 MAX_TOKENS = 4096
+CROSS_ENCODER_MODEL_NAME = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
+CROSS_ENCODER_LIMIT = 10  # Final top results after re-ranking
+QDRANT_SEARCH_LIMIT = 20  # More candidates for cross-encoder
 
 
 class QueryUsecase(IQueryUsecase):
@@ -19,6 +23,7 @@ class QueryUsecase(IQueryUsecase):
         self.qdrant = qdrant
         self.logger = logger
         self.model = get_embedded_model()
+        self.cross_encoder = CrossEncoder(CROSS_ENCODER_MODEL_NAME)
         self.collections_name = config.QDRANT_COLLECTION_NAME
         self.history: list[HistoryResponseDTO] | list = []
         self.config = config
@@ -95,10 +100,29 @@ class QueryUsecase(IQueryUsecase):
         results = self.qdrant.query_points(
             collection_name=self.collections_name,
             query=embedding,
-            limit=3,
+            limit=QDRANT_SEARCH_LIMIT,
         )
-        self.logger.info(f"Найдено документов: {len(results.points)}")
-        return [res.payload for res in results.points]
+        self.logger.info(f"Найдено кандидатов: {len(results.points)}")
+        return results.points
+
+    def _rerank_with_cross_encoder(self, query: str, candidates: list) -> list:
+        if not candidates:
+            return []
+
+        pairs = []
+        for candidate in candidates:
+            text = candidate.payload.get("text", "")
+            pairs.append([query, text])
+
+        scores = self.cross_encoder.predict(pairs)
+        
+        scored_candidates = list(zip(scores, candidates))
+        scored_candidates.sort(key=lambda x: x[0], reverse=True)
+        
+        reranked = scored_candidates[:CROSS_ENCODER_LIMIT]
+        self.logger.info(f"После кросс-энкодер ре-ранжирования: {len(reranked)} документов")
+        
+        return [c.payload for _, c in reranked]
 
     async def _private_method_3_generate_answer(self, nearests_texts, query_topic):
         context_parts = []
@@ -135,10 +159,12 @@ class QueryUsecase(IQueryUsecase):
 
         embedding = await self._private_method_1_encode_topic(query.query_topic)
 
-        nearests_texts = self._private_method_2_search_qdrant(embedding)
+        candidates = self._private_method_2_search_qdrant(embedding)
+
+        reranked = self._rerank_with_cross_encoder(query.query_topic, candidates)
 
         model_answer = await self._private_method_3_generate_answer(
-            nearests_texts, query.query_topic
+            reranked, query.query_topic
         )
 
         self.history.append(
