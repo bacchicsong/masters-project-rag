@@ -1,3 +1,4 @@
+python-telegram-bot==21.10
 fastapi==0.128.0
 uvicorn==0.40.0
 gigachat==0.1.43

@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     QDRANT_HOST: str = "qdrant"
     QDRANT_PORT: int = 6333
     QDRANT_COLLECTION_NAME: str = "definitions"
+    TELEGRAM_BOT_TOKEN: str = ""
     MODEL_NAME: str = "sberbank-ai/sbert_large_nlu_rus"
     LLM_MODEL: str | None = "cointegrated/rut5-base-absum"
 
