@@ -57,9 +57,43 @@ services:
     networks:
       - app_network
 
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web UI (консоль)
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    networks:
+      - app_network
+
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.mlflow
+    container_name: mlflow
+    ports:
+      - "5000:5000"
+    environment:
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+    command: >
+      sh -c "mlflow server --host 0.0.0.0 --port 5000 --default-artifact-root s3://mlflow-artifacts/"
+    depends_on:
+      - minio
+    networks:
+      - app_network
+
 networks:
   app_network:
     driver: bridge
 
 volumes:
   qdrant_storage:
+  minio_data:
