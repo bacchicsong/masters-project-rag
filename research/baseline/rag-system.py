@@ -44,8 +44,11 @@ CONFIG = {
     # Параметры ретривера (наследуются из RETRIEVER_CONFIG)
     'retriever': {
         'model_name': RETRIEVER_CONFIG['model_name'],
+        'cross_encoder_model': RETRIEVER_CONFIG['cross_encoder_model'],
         'strategy': RETRIEVER_CONFIG['strategy'],
+        'use_cross_encoder': RETRIEVER_CONFIG['use_cross_encoder'],
         'bm25_k': RETRIEVER_CONFIG['bm25_k'],
+        'bi_encoder_k': RETRIEVER_CONFIG['bi_encoder_k'],
         'top_k': RETRIEVER_CONFIG['top_k'],
     },
     
@@ -370,7 +373,9 @@ class RAGSystem:
         self.retriever = HybridRetriever(
             docs=self.documents,
             model_name=self.config['retriever']['model_name'],
+            cross_encoder_model=self.config['retriever']['cross_encoder_model'],
             strategy=self.config['retriever']['strategy'],
+            use_cross_encoder=self.config['retriever']['use_cross_encoder'],
             show_debug=self.config['show_debug']
         )
         self.retriever.encode_corpus(show_progress=True)
