@@ -1,0 +1,8 @@
+# Additional dependencies for MLflow experiments
+mlflow>=2.16.0
+boto3>=1.34.0
+sentence-transformers>=2.2.0
+scikit-learn>=1.0.0
+rank-bm25>=0.2.2
+numpy>=1.21.0
+psutil>=5.8.0
