@@ -74,7 +74,7 @@ async def get_stats(
     lenghts = [len(obj["query"]) for obj in history]
     mean_time = sum(durations) / len(durations)
     mean_len = sum(lenghts) / len(lenghts)
-    mean_time.sort()
+    durations.sort()
     q50 = durations[len(durations) // 2]
     q95 = durations[int(len(durations) * 0.95)]
     q99 = durations[int(len(durations) * 0.99)]
