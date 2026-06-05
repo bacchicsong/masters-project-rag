@@ -8,12 +8,11 @@ from sentence_transformers import losses
 from torch.utils.data import DataLoader
 
 from config.config import RAG_CONFIG
-from tools.fill_qdrant import load_json_files
 
 QDRANT_TIMEOUT = 180
 EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 FINE_TUNED_MODEL_PATH = str(Path(__file__).parent.parent.parent / "models" / "fine_tuned_bi_encoder")
-USE_FINE_TUNED = True
+USE_FINE_TUNED = False
 
 def chunk_text(text, size=100, overlap=20):
     words = text.split()
@@ -23,6 +22,8 @@ def chunk_text(text, size=100, overlap=20):
     return chunks
 
 def get_train_examples():
+    # Import locally to avoid circular import
+    from tools.fill_qdrant import load_json_files
     train_examples = []
     texts = load_json_files("data")
     for doc in texts:
@@ -37,16 +38,8 @@ def get_embedded_model() -> SentenceTransformer:
         model = SentenceTransformer(FINE_TUNED_MODEL_PATH)
         return model
 
-    train_examples = get_train_examples()
+    # Load the base pre-trained model directly (no fine-tuning)
     model = SentenceTransformer(EMBEDDING_MODEL_NAME)
-    train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=32)
-    train_loss = losses.CosineSimilarityLoss(model)
-    model.fit(
-        train_objectives=[(train_dataloader, train_loss)],
-        epochs=2,
-        warmup_steps=100,
-        output_path=FINE_TUNED_MODEL_PATH
-    )
     return model
 
 
