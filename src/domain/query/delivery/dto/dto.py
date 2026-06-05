@@ -15,7 +15,7 @@ class QueryRequestDTO(BaseModel):
 class HistoryItemDTO(BaseModel):
     query: str
     response: str
-    timestamp: datetime
+    timestamp: float
     duration: float
 
 

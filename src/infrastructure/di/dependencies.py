@@ -1,7 +1,7 @@
 import os
 import logging
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Header
 from qdrant_client import QdrantClient
 
 from domain.query.usecase.i_query_usecase import IQueryUsecase
@@ -15,8 +15,8 @@ def get_logger() -> logging.Logger:
     return logger
 
 
-def verify_token(x_token: str) -> str | HTTPException:
-    expected_token = os.getenv("API_ACESS_TOKEN")
+def verify_token(x_token: str = Header(..., alias="X-Token")) -> str | HTTPException:
+    expected_token = os.getenv("API_ACCESS_TOKEN")
     if x_token != expected_token:
         raise HTTPException(status_code=401, detail="Unauthorized")
     return x_token

@@ -8,7 +8,6 @@ from sentence_transformers import losses
 from torch.utils.data import DataLoader
 
 from config.config import RAG_CONFIG
-from tools.fill_qdrant import load_json_files
 
 QDRANT_TIMEOUT = 180
 EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
@@ -23,6 +22,9 @@ def chunk_text(text, size=100, overlap=20):
     return chunks
 
 def get_train_examples():
+    # Lazy import to avoid circular dependency with fill_qdrant.py
+    from tools.fill_qdrant import load_json_files
+
     train_examples = []
     texts = load_json_files("data")
     for doc in texts:

@@ -21,7 +21,7 @@ class FastAPIClient:
         system_prompt: Optional[str] = None,
     ) -> QueryResponseDTO:
         headers = {
-            "Authorization": f"Bearer {self.api_token}",
+            "X-Token": self.api_token,
         }
 
         data = {
@@ -29,7 +29,7 @@ class FastAPIClient:
         }
 
         if system_prompt is not None:
-            data["system_promt"] = system_prompt
+            data["system_prompt"] = system_prompt
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(

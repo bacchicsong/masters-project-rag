@@ -1,7 +1,7 @@
 from typing import Optional
 from dotenv import load_dotenv
 
-from fastapi import APIRouter, Depends, Form, HTTPException
+from fastapi import APIRouter, Depends, Form, HTTPException, Query
 
 from domain.query.delivery.dto.dto import (
     QueryResponseDTO,
@@ -10,7 +10,7 @@ from domain.query.delivery.dto.dto import (
     FeedbackRequestDTO,
     FeedbackResponseDTO,
 )
-from domain.query.query import Query
+from domain.query.query import Query as DomainQuery
 from domain.query.usecase.i_query_usecase import IQueryUsecase
 from infrastructure.di.dependencies import get_query_usecase, verify_token
 
@@ -21,17 +21,17 @@ router = APIRouter(prefix="/api/v1")
 
 @router.post("/forward")
 async def forward(
-    query_topic: str,
-    system_promt: Optional[str] = Form(None),
+    query_topic: str = Form(...),
+    system_prompt: Optional[str] = Form(None),
     token: str = Depends(verify_token),
     service: IQueryUsecase = Depends(get_query_usecase),
 ) -> QueryResponseDTO:
     _ = token
     try:
         research_results = await service.processes_query(
-            Query(
+            DomainQuery(
                 query_topic=query_topic,
-                system_promt=system_promt,
+                system_prompt=system_prompt,
             )
         )
         return QueryResponseDTO(text=research_results.text)
@@ -48,19 +48,18 @@ async def forward(
 
 @router.get("/history")
 async def get_history(
-    history_depth: int = Form(...),
+    history_depth: int = Query(10),
     service: IQueryUsecase = Depends(get_query_usecase),
 ) -> HistoryResponseDTO | dict[str, str]:
     if not service.history:
         return {"details": "There is no available history yet"}
-    if len(service.history) <= history_depth:
-        return service.history
-    return service.history[:history_depth]
+    history_items = service.history if len(service.history) <= history_depth else service.history[:history_depth]
+    return HistoryResponseDTO(history=history_items)
 
 
 @router.get("/stats")
 async def get_stats(
-    history_depth: int = Form(...),
+    history_depth: int = Query(10),
     service: IQueryUsecase = Depends(get_query_usecase),
 ) -> StatsResponseDTO | dict[str, str]:
     if not service.history:
@@ -70,14 +69,17 @@ async def get_stats(
     else:
         history = service.history[:history_depth]
 
-    durations = [obj["duration"] for obj in history]
-    lenghts = [len(obj["query"]) for obj in history]
+    durations = [obj.duration for obj in history]
+    lengths = [len(obj.query) for obj in history]
+    if not durations:
+        return {"details": "No history data available for stats"}
+
     mean_time = sum(durations) / len(durations)
-    mean_len = sum(lenghts) / len(lenghts)
-    mean_time.sort()
-    q50 = durations[len(durations) // 2]
-    q95 = durations[int(len(durations) * 0.95)]
-    q99 = durations[int(len(durations) * 0.99)]
+    sorted_durations = sorted(durations)
+    mean_len = sum(lengths) / len(lengths)
+    q50 = sorted_durations[len(sorted_durations) // 2]
+    q95 = sorted_durations[int(len(sorted_durations) * 0.95)]
+    q99 = sorted_durations[int(len(sorted_durations) * 0.99)]
 
     return StatsResponseDTO(
         total_queries=len(history),
@@ -89,8 +91,8 @@ async def get_stats(
         },
         query_stats={
             "avg_query_len": mean_len,
-            "max_query_len": max(lenghts),
-            "min_query_len": min(lenghts),
+            "max_query_len": max(lengths),
+            "min_query_len": min(lengths),
         },
     )
 

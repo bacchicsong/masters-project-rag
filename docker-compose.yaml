@@ -12,7 +12,7 @@ services:
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
       - QDRANT_COLLECTION_NAME=definitions
-      - API_ACESS_TOKEN=${GIGACHAT_AUTH_KEY}
+      - API_ACCESS_TOKEN=${GIGACHAT_AUTH_KEY}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
     volumes:
       - ./data:/app/data
@@ -47,7 +47,7 @@ services:
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
       - QDRANT_COLLECTION_NAME=definitions
-      - API_ACESS_TOKEN=${GIGACHAT_AUTH_KEY}
+      - API_ACCESS_TOKEN=${GIGACHAT_AUTH_KEY}
     volumes:
         - ./data:/app/data
     depends_on:

@@ -6,11 +6,11 @@ class Query:
     def __init__(
         self,
         query_topic: str,
-        system_promt: Optional[str] = None,
+        system_prompt: Optional[str] = None,
     ):
         self.query_topic = query_topic
-        self.system_promt = (
-            system_promt
+        self.system_prompt = (
+            system_prompt
             or """\
         your prompt
         """
