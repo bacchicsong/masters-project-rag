@@ -3,10 +3,10 @@ from qdrant_client import QdrantClient
 from sentence_transformers import CrossEncoder
 
 from domain.query.query import Query, QueryResults
-from domain.query.delivery.dto.dto import HistoryResponseDTO
-from domain.query.delivery.dto.dto import HistoryItemDTO
+from domain.query.delivery.dto.dto import HistoryResponseDTO, HistoryItemDTO, FeedbackRequestDTO
 from domain.query.usecase.i_query_usecase import IQueryUsecase
 from infrastructure.db.qdrand import get_embedded_model
+from infrastructure.feedback.feedback_storage import FeedbackStorage, TripletRecord
 
 import uuid
 import json
@@ -14,8 +14,8 @@ import requests
 
 MAX_TOKENS = 4096
 CROSS_ENCODER_MODEL_NAME = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
-CROSS_ENCODER_LIMIT = 10  # Final top results after re-ranking
-QDRANT_SEARCH_LIMIT = 20  # More candidates for cross-encoder
+CROSS_ENCODER_LIMIT = 10
+QDRANT_SEARCH_LIMIT = 20
 
 
 class QueryUsecase(IQueryUsecase):
@@ -25,8 +25,10 @@ class QueryUsecase(IQueryUsecase):
         self.model = get_embedded_model()
         self.cross_encoder = CrossEncoder(CROSS_ENCODER_MODEL_NAME)
         self.collections_name = config.QDRANT_COLLECTION_NAME
-        self.history: list[HistoryResponseDTO] | list = []
+        self.history = []
         self.config = config
+        self.feedback_storage = FeedbackStorage()
+        self._query_context: dict = {}  # query_id -> {query, candidates}
 
     def _get_giga_token(self):
         rq_uid = str(uuid.uuid4())
@@ -156,16 +158,24 @@ class QueryUsecase(IQueryUsecase):
     async def processes_query(self, query: Query) -> QueryResults:
         """Processes the query topic and returns the final result."""
         start_time = time.time()
+        query_id = str(uuid.uuid4())
 
         embedding = await self._private_method_1_encode_topic(query.query_topic)
-
         candidates = self._private_method_2_search_qdrant(embedding)
-
         reranked = self._rerank_with_cross_encoder(query.query_topic, candidates)
+
+        # Save context for feedback processing
+        self._query_context[query_id] = {
+            "query": query.query_topic,
+            "all_candidates": candidates,
+            "reranked": reranked,
+        }
 
         model_answer = await self._private_method_3_generate_answer(
             reranked, query.query_topic
         )
+
+        doc_ids = list(range(len(reranked)))
 
         self.history.append(
             HistoryItemDTO(
@@ -176,4 +186,98 @@ class QueryUsecase(IQueryUsecase):
             )
         )
 
-        return QueryResults(text=model_answer["answer"])
+        return QueryResults(
+            text=model_answer["answer"],
+            query_id=query_id,
+            retrieved_doc_ids=doc_ids,
+        )
+
+    def save_feedback(self, feedback: FeedbackRequestDTO) -> int:
+        """Saves feedback and creates training triplets. Returns number of triplets created."""
+        ctx = self._query_context.get(feedback.query_id)
+        if not ctx:
+            self.logger.warning(f"No context found for query_id: {feedback.query_id}")
+            return 0
+
+        query = ctx["query"]
+        reranked = ctx["reranked"]
+        all_candidates = ctx.get("all_candidates", [])
+
+        triplets_count = 0
+        timestamp = time.strftime("%Y-%m-%dT%H:%M:%S")
+
+        if feedback.liked:
+            # Positive: top reranked doc(s)
+            positive = reranked[0] if reranked else None
+            if not positive:
+                return 0
+
+            positive_text = positive.get("text", "")
+
+            # Negative: low-ranking candidates from original search that didn't make top-K
+            negative_candidates = []
+            for c in all_candidates:
+                text = c.payload.get("text", "")
+                # Skip if this doc is in top reranked
+                if any(d.get("text") == text for d in reranked[:3]):
+                    continue
+                negative_candidates.append(text)
+
+            # Pick one negative
+            negative = negative_candidates[-1] if negative_candidates else ""
+
+            if positive_text and negative:
+                triplet = TripletRecord(
+                    query=query,
+                    query_id=feedback.query_id,
+                    positive_doc=positive_text,
+                    negative_doc=negative,
+                    timestamp=timestamp,
+                )
+                self.feedback_storage.save_triplet(triplet)
+                triplets_count += 1
+
+        else:
+            # Disliked: top docs are negative examples
+            for doc in reranked[:2]:
+                negative_text = doc.get("text", "")
+
+                # Positive from user-specified relevant docs or from lower-ranked candidates
+                if feedback.relevant_doc_ids:
+                    # User told us which docs are relevant
+                    for c in all_candidates:
+                        cid = getattr(c, "id", None)
+                        if cid in feedback.relevant_doc_ids:
+                            positive_text = c.payload.get("text", "")
+                            if positive_text and positive_text != negative_text:
+                                triplet = TripletRecord(
+                                    query=query,
+                                    query_id=feedback.query_id,
+                                    positive_doc=positive_text,
+                                    negative_doc=negative_text,
+                                    timestamp=timestamp,
+                                )
+                                self.feedback_storage.save_triplet(triplet)
+                                triplets_count += 1
+                                break
+                else:
+                    # Use docs ranked 3-5 as positive relative to top 1-2
+                    for doc_pos in reranked[2:4]:
+                        positive_text = doc_pos.get("text", "")
+                        if positive_text and positive_text != negative_text:
+                            triplet = TripletRecord(
+                                query=query,
+                                query_id=feedback.query_id,
+                                positive_doc=positive_text,
+                                negative_doc=negative_text,
+                                timestamp=timestamp,
+                            )
+                            self.feedback_storage.save_triplet(triplet)
+                            triplets_count += 1
+                            break
+
+        # Clean up context
+        self._query_context.pop(feedback.query_id, None)
+
+        self.logger.info(f"Saved {triplets_count} triplet(s) for query_id: {feedback.query_id}")
+        return triplets_count
