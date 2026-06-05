@@ -12,3 +12,7 @@ env
 data/feedback/
 models/
 fine_tuned_model/
+mlflow.db
+exp4_out.txt
+exp4_out2.txt
+experiment4_output.log
