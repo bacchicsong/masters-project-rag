@@ -1,0 +1,334 @@
+{"timestamp":"2026-06-10T08:06:32.401998Z","level":"info","event":"::group::Pre Execute","logger":"task","filename":"task_runner.py","lineno":1926}
+{"timestamp":"2026-06-10T08:06:38.292794Z","level":"info","event":"DAG bundles loaded: dags-folder, example_dags","task_id":"run_tbank_parser","try_number":1,"ti_id":"019eb091-86ea-736b-a740-898ba52d517c","run_id":"manual__2026-06-10T08:06:27.772338+00:00","dag_id":"daily_data_update","map_index":-1,"logger":"airflow.dag_processing.bundles.manager.DagBundlesManager","filename":"manager.py","lineno":209}
+{"timestamp":"2026-06-10T08:06:38.296672Z","level":"info","event":"Filling up the DagBag from /opt/airflow/dags/update_data.py","task_id":"run_tbank_parser","try_number":1,"ti_id":"019eb091-86ea-736b-a740-898ba52d517c","run_id":"manual__2026-06-10T08:06:27.772338+00:00","dag_id":"daily_data_update","map_index":-1,"logger":"airflow.dag_processing.dagbag.BundleDagBag","filename":"dagbag.py","lineno":469}
+{"timestamp":"2026-06-10T08:06:38.481216Z","level":"info","event":"✅ Парсер успешно загружен","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.489072Z","level":"info","event":"✅ Задача создана: run_tbank_parser","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.489197Z","level":"warning","event":"The `airflow.operators.python.PythonOperator` attribute is deprecated. Please use `'airflow.providers.standard.operators.python.PythonOperator'`.","category":"UserWarning","filename":"/opt/airflow/dags/update_data.py","lineno":48,"task_id":"run_tbank_parser","try_number":1,"ti_id":"019eb091-86ea-736b-a740-898ba52d517c","run_id":"manual__2026-06-10T08:06:27.772338+00:00","dag_id":"daily_data_update","map_index":-1,"logger":"py.warnings"}
+{"timestamp":"2026-06-10T08:06:38.608562Z","level":"info","event":"Task instance is in running state","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.608837Z","level":"info","event":" Previous state of the Task instance: TaskInstanceState.QUEUED","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.609034Z","level":"info","event":"Current task name:run_tbank_parser","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.609118Z","level":"info","event":"Dag name:daily_data_update","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.609543Z","level":"info","event":"::endgroup::","task_id":"run_tbank_parser","try_number":1,"ti_id":"019eb091-86ea-736b-a740-898ba52d517c","run_id":"manual__2026-06-10T08:06:27.772338+00:00","dag_id":"daily_data_update","map_index":-1,"logger":"task","filename":"task_runner.py","lineno":1727}
+{"timestamp":"2026-06-10T08:06:38.613894Z","level":"info","event":"==================================================","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.614132Z","level":"info","event":"🚀 ЗАПУСК ПАРСЕРА","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.614218Z","level":"info","event":"Время: 2026-06-10 08:06:38.613835","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.614667Z","level":"info","event":"==================================================","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.614838Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.614921Z","level":"info","event":"\u001b[36m================================================================================","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.615017Z","level":"info","event":"\u001b[36mT-BANK KNOWLEDGE BASE PARSER & CLEANER","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.615093Z","level":"info","event":"\u001b[36m================================================================================\u001b[0m","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.615170Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.615248Z","level":"info","event":"\u001b[33m📥 ЭТАП 1: ПАРСИНГ","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.615308Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.615378Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.615500Z","level":"info","event":"\u001b[36m================================================================================","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.615578Z","level":"info","event":"\u001b[36m🚀 T-Bank Knowledge Parser","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.615644Z","level":"info","event":"\u001b[36m================================================================================\u001b[0m","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.615692Z","level":"info","event":"\u001b[32m📁 tbank_knowledge","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.615737Z","level":"info","event":"\u001b[32m🌐 https://www.tbank.ru/invest/help/educate/how-it-works/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.615799Z","level":"info","event":"\u001b[33m📊 Глубина: 4","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.615920Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.619991Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.620168Z","level":"info","event":"\u001b[36m[Глубина 0/4] https://www.tbank.ru/invest/help/educate/how-it-works/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:38.620260Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:39.787213Z","level":"info","event":"\u001b[32m✅ 604589 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:39.882388Z","level":"info","event":"\u001b[32m   228 параграфов, 8847 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:39.887216Z","level":"info","event":"\u001b[36m💾 001_как_работает_рынок_ценных_бумаг.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:39.891092Z","level":"info","event":"\u001b[32m✅ Статья #1: Как работает рынок ценных бумаг","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:39.894320Z","level":"error","event":"\rПрогресс парсинга: 0стр [00:00, ?стр/s]","logger":"task.stderr"}
+{"timestamp":"2026-06-10T08:06:39.895720Z","level":"error","event":"\rФильтрация ссылок:   0%|          | 0/385 [00:00<?, ?it/s]\u001b[A","logger":"task.stderr"}
+{"timestamp":"2026-06-10T08:06:39.895943Z","level":"info","event":"\u001b[32m   Новых ссылок: 32","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:39.896125Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:39.896251Z","level":"info","event":"\u001b[36m  [Глубина 1/4] https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/ipo-n-buyback/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:40.901865Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/ipo-n-buyback/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:41.864129Z","level":"info","event":"\u001b[32m✅ 773293 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:42.017755Z","level":"info","event":"\u001b[32m   267 параграфов, 17673 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:42.022321Z","level":"info","event":"\u001b[36m💾 002_размещение_и_выкуп_акций.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:42.026849Z","level":"info","event":"\u001b[32m✅ Статья #2: Размещение и выкуп акций","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:42.028391Z","level":"error","event":"\r                                                          \u001b[A","logger":"task.stderr"}
+{"timestamp":"2026-06-10T08:06:42.036374Z","level":"error","event":"\rФильтрация ссылок:   0%|          | 0/387 [00:00<?, ?it/s]\u001b[A","logger":"task.stderr"}
+{"timestamp":"2026-06-10T08:06:42.036670Z","level":"info","event":"\u001b[32m   Новых ссылок: 32","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:42.037019Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:42.037208Z","level":"info","event":"\u001b[36m    [Глубина 2/4] https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/stocks/?card=q2","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:43.041292Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/stocks/?card=q2","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:44.045907Z","level":"info","event":"\u001b[32m✅ 800003 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:44.326532Z","level":"info","event":"\u001b[32m   288 параграфов, 19183 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:44.335480Z","level":"info","event":"\u001b[36m💾 003_что_такое_акции.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:44.338025Z","level":"info","event":"\u001b[32m✅ Статья #3: Что такое акции","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:44.344298Z","level":"error","event":"\r                                                          \u001b[A","logger":"task.stderr"}
+{"timestamp":"2026-06-10T08:06:44.364063Z","level":"error","event":"\rФильтрация ссылок:   0%|          | 0/394 [00:00<?, ?it/s]\u001b[A","logger":"task.stderr"}
+{"timestamp":"2026-06-10T08:06:44.364733Z","level":"info","event":"\u001b[32m   Новых ссылок: 35","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:44.365485Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:44.366041Z","level":"info","event":"\u001b[36m      [Глубина 3/4] https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/liquidity/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:45.367263Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/liquidity/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:46.541294Z","level":"info","event":"\u001b[32m✅ 1064682 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:46.782443Z","level":"info","event":"\u001b[32m   353 параграфов, 33922 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:46.799848Z","level":"info","event":"\u001b[36m💾 004_что_такое_ликвидность.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:46.813178Z","level":"info","event":"\u001b[32m✅ Статья #4: Что такое ликвидность","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:46.814714Z","level":"error","event":"\r                                                          \u001b[A","logger":"task.stderr"}
+{"timestamp":"2026-06-10T08:06:46.832241Z","level":"error","event":"\rФильтрация ссылок:   0%|          | 0/393 [00:00<?, ?it/s]\u001b[A","logger":"task.stderr"}
+{"timestamp":"2026-06-10T08:06:46.832866Z","level":"info","event":"\u001b[32m   Новых ссылок: 33","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:46.833324Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:46.833499Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/liquidity/?card=q6","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:47.837459Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/liquidity/?card=q6","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:49.128147Z","level":"info","event":"\u001b[32m✅ 1064727 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:49.247620Z","level":"info","event":"\u001b[32m   353 параграфов, 33922 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:49.256208Z","level":"info","event":"\u001b[36m💾 005_что_такое_ликвидность.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:49.256942Z","level":"info","event":"\u001b[32m✅ Статья #5: Что такое ликвидность","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:49.257214Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:49.257381Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/fundamental/?card=q6","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:50.268269Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/fundamental/?card=q6","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:51.514270Z","level":"info","event":"\u001b[32m✅ 1265798 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:51.763859Z","level":"info","event":"\u001b[32m   424 параграфов, 41934 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:51.841645Z","level":"info","event":"\u001b[36m💾 006_фундаментальный_анализ_ценных_бумаг.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:51.842367Z","level":"info","event":"\u001b[32m✅ Статья #6: Фундаментальный анализ ценных бумаг","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:51.844146Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:51.845179Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/bonds-profit/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:52.786156Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/bonds-profit/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:54.650858Z","level":"info","event":"\u001b[32m✅ 774227 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:54.926320Z","level":"info","event":"\u001b[32m   282 параграфов, 18043 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:54.932548Z","level":"info","event":"\u001b[36m💾 007_как_заработать_на_облигациях.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:54.933090Z","level":"info","event":"\u001b[32m✅ Статья #7: Как заработать на облигациях","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:54.934806Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:54.934906Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/fraud-alert/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:55.938250Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/fraud-alert/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:57.272876Z","level":"info","event":"\u001b[32m✅ 778521 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:57.587175Z","level":"info","event":"\u001b[32m   273 параграфов, 19218 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:57.610838Z","level":"info","event":"\u001b[36m💾 008_риск_манипуляций_на_бирже.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:57.611768Z","level":"info","event":"\u001b[32m✅ Статья #8: Риск манипуляций на бирже","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:57.611971Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:57.615690Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/coupon-yield/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:58.620691Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/coupon-yield/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:59.588716Z","level":"info","event":"\u001b[32m✅ 751606 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:59.767129Z","level":"info","event":"\u001b[32m   269 параграфов, 15475 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:59.777841Z","level":"info","event":"\u001b[36m💾 009_купонный_доход_по_облигациям.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:59.779873Z","level":"info","event":"\u001b[32m✅ Статья #9: Купонный доход по облигациям","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:59.780250Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:06:59.780576Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/stocks/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:00.823836Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/stocks/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:02.187922Z","level":"info","event":"\u001b[32m✅ 799856 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:02.992000Z","level":"info","event":"\u001b[32m   288 параграфов, 19183 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:03.936840Z","level":"info","event":"\u001b[36m💾 010_что_такое_акции.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:03.947709Z","level":"info","event":"\u001b[32m✅ Статья #10: Что такое акции","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:03.951389Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:03.954801Z","level":"info","event":"\u001b[33m💾 Checkpoint: 10 статей (24.4/мин)","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:03.956719Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:03.958729Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:03.959112Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/dividend-yield/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:04.177951Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/dividend-yield/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:04.844160Z","level":"info","event":"\u001b[32m✅ 875039 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:05.280074Z","level":"info","event":"\u001b[32m   296 параграфов, 24092 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:05.313768Z","level":"info","event":"\u001b[36m💾 011_дивидендный_доход_по_акциям.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:05.314104Z","level":"info","event":"\u001b[32m✅ Статья #11: Дивидендный доход по акциям","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:05.314336Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:05.315939Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/when-buy-stocks/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:06.371403Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/when-buy-stocks/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:07.579653Z","level":"info","event":"\u001b[32m✅ 1060270 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:07.944877Z","level":"info","event":"\u001b[32m   366 параграфов, 32244 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:07.964498Z","level":"info","event":"\u001b[36m💾 012_как_начать_торговать_на_бирже.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:07.966698Z","level":"info","event":"\u001b[32m✅ Статья #12: Как начать торговать на бирже","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:07.968669Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:07.969513Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:08.978065Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:10.074332Z","level":"info","event":"\u001b[32m✅ 614308 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:10.307210Z","level":"info","event":"\u001b[32m   240 параграфов, 9930 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:10.313887Z","level":"info","event":"\u001b[36m💾 013_советы_начинающим_инвесторам.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:10.314397Z","level":"info","event":"\u001b[32m✅ Статья #13: Советы начинающим инвесторам","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:10.314498Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:10.314608Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/services/terminal/about/analysis/?card=q1","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:11.429821Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/services/terminal/about/analysis/?card=q1","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:12.013609Z","level":"info","event":"\u001b[32m✅ 728897 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:12.088945Z","level":"info","event":"\u001b[32m   238 параграфов, 14428 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:12.091151Z","level":"info","event":"\u001b[36m💾 014_как_в_терминале_выбрать_активы_для_биржевой_торговли.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:12.091321Z","level":"info","event":"\u001b[32m✅ Статья #14: Как в терминале выбрать активы для биржевой торгов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:12.091391Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:12.091459Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/portfolio-n-risk/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:13.097076Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/portfolio-n-risk/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:13.991204Z","level":"info","event":"\u001b[32m✅ 861838 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:14.221851Z","level":"info","event":"\u001b[32m   286 параграфов, 22370 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:14.244244Z","level":"info","event":"\u001b[36m💾 015_сбалансированный_портфель_и_минимизация_рисков.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:14.244614Z","level":"info","event":"\u001b[32m✅ Статья #15: Сбалансированный портфель и минимизация рисков","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:14.245318Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:14.246632Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/services/terminal/about/use/?card=q2","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:15.254007Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/services/terminal/about/use/?card=q2","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:18.868595Z","level":"info","event":"\u001b[31m❌ HTTPSConnectionPool(host='www.tbank.ru', port=443): Max retries exceeded with url: /invest/help/serv","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:18.872771Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:18.874920Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/liquidity/?card=q5","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:19.871760Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/liquidity/?card=q5","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:20.741348Z","level":"info","event":"\u001b[32m✅ 1064771 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:20.857007Z","level":"info","event":"\u001b[32m   353 параграфов, 33922 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:20.863885Z","level":"info","event":"\u001b[36m💾 016_что_такое_ликвидность.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:20.865630Z","level":"info","event":"\u001b[32m✅ Статья #16: Что такое ликвидность","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:20.865923Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:20.866077Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/what-is-exchange/trading-modes/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:21.868824Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/what-is-exchange/trading-modes/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:22.672612Z","level":"info","event":"\u001b[32m✅ 697207 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:23.287587Z","level":"info","event":"\u001b[32m   254 параграфов, 14664 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:23.294834Z","level":"info","event":"\u001b[36m💾 017_режимы_торгов.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:23.295027Z","level":"info","event":"\u001b[32m✅ Статья #17: Режимы торгов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:23.295112Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:23.295214Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/funds/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:24.298556Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/funds/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:24.571814Z","level":"info","event":"\u001b[32m✅ 842156 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:24.663855Z","level":"info","event":"\u001b[32m   299 параграфов, 22380 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:24.667502Z","level":"info","event":"\u001b[36m💾 018_что_такое_фонды_etf_и_бпиф.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:24.667723Z","level":"info","event":"\u001b[32m✅ Статья #18: Что такое фонды ETF и БПИФ","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:24.667883Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:24.668006Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/what-is-exchange/investment-features/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:25.671417Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/what-is-exchange/investment-features/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:26.920989Z","level":"info","event":"\u001b[32m✅ 776615 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:27.574956Z","level":"info","event":"\u001b[32m   273 параграфов, 18040 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:27.595273Z","level":"info","event":"\u001b[36m💾 019_особенности_инвестирования_на_бирже.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:27.600155Z","level":"info","event":"\u001b[32m✅ Статья #19: Особенности инвестирования на бирже","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:27.601598Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:27.602746Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/liquidity/?card=q4","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:28.603797Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/liquidity/?card=q4","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:30.627796Z","level":"info","event":"\u001b[32m✅ 1065167 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:31.879874Z","level":"info","event":"\u001b[32m   353 параграфов, 33922 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:31.886338Z","level":"info","event":"\u001b[36m💾 020_что_такое_ликвидность.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:31.886687Z","level":"info","event":"\u001b[32m✅ Статья #20: Что такое ликвидность","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:31.887058Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:31.887428Z","level":"info","event":"\u001b[33m💾 Checkpoint: 20 статей (22.6/мин)","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:31.888835Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:31.889257Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:31.889431Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/liquidity/?card=q2","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:32.882298Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/liquidity/?card=q2","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:34.199460Z","level":"info","event":"\u001b[32m✅ 1064575 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:34.628698Z","level":"info","event":"\u001b[32m   353 параграфов, 33922 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:34.639757Z","level":"info","event":"\u001b[36m💾 021_что_такое_ликвидность.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:34.641365Z","level":"info","event":"\u001b[32m✅ Статья #21: Что такое ликвидность","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:34.641628Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:34.641970Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:35.656222Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:37.390495Z","level":"info","event":"\u001b[32m✅ 563221 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:38.283990Z","level":"info","event":"\u001b[32m   248 параграфов, 9913 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:38.306223Z","level":"info","event":"\u001b[36m💾 022_полезное_для_инвесторов.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:38.309550Z","level":"info","event":"\u001b[32m✅ Статья #22: Полезное для инвесторов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:38.311704Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:38.315986Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/liquidity/?card=q1","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:39.289337Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/liquidity/?card=q1","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:41.457623Z","level":"info","event":"\u001b[32m✅ 1064717 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:42.049340Z","level":"info","event":"\u001b[32m   353 параграфов, 33922 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:42.160914Z","level":"info","event":"\u001b[36m💾 023_что_такое_ликвидность.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:42.161167Z","level":"info","event":"\u001b[32m✅ Статья #23: Что такое ликвидность","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:42.164261Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:42.177929Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/state-bonds/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:43.169227Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/state-bonds/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:44.451084Z","level":"info","event":"\u001b[32m✅ 815231 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:44.843123Z","level":"info","event":"\u001b[32m   295 параграфов, 21088 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:44.865697Z","level":"info","event":"\u001b[36m💾 024_что_такое_офз.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:44.866298Z","level":"info","event":"\u001b[32m✅ Статья #24: Что такое ОФЗ","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:44.866627Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:44.867101Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/bonds/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:45.924362Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/bonds/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:48.206687Z","level":"info","event":"\u001b[32m✅ 946403 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:50.603049Z","level":"info","event":"\u001b[32m   327 параграфов, 28335 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:50.610988Z","level":"info","event":"\u001b[36m💾 025_что_такое_облигации.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:50.614684Z","level":"info","event":"\u001b[32m✅ Статья #25: Что такое облигации","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:50.616947Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:50.619537Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/services/terminal/about/chart/?card=q5","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:50.622387Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/services/terminal/about/chart/?card=q5","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:52.269014Z","level":"info","event":"\u001b[32m✅ 596252 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:52.792786Z","level":"info","event":"\u001b[32m   214 параграфов, 8776 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:52.824027Z","level":"info","event":"\u001b[36m💾 026_терминал_т_инвестиций.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:52.829013Z","level":"info","event":"\u001b[32m✅ Статья #26: Терминал Т⁠-⁠Инвестиций","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:52.830027Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:52.840730Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/what-is-exchange/exchange-members/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:07:53.820162Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/what-is-exchange/exchange-members/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.245001Z","level":"info","event":"\u001b[32m✅ 731281 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.271867Z","level":"info","event":"\u001b[32m   269 параграфов, 15927 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.273068Z","level":"info","event":"\u001b[36m💾 027_участники_рынка_ценных_бумаг.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.273567Z","level":"info","event":"\u001b[32m✅ Статья #27: Участники рынка ценных бумаг","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.275265Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.276791Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/liquidity/?card=q7","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.280020Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/liquidity/?card=q7","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.289878Z","level":"info","event":"\u001b[31m❌ HTTPSConnectionPool(host='www.tbank.ru', port=443): Max retries exceeded with url: /invest/help/educ","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.297637Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.299724Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/liquidity/?card=q3","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.303140Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/liquidity/?card=q3","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.323896Z","level":"info","event":"\u001b[31m❌ HTTPSConnectionPool(host='www.tbank.ru', port=443): Max retries exceeded with url: /invest/help/educ","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.324658Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.331465Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/types-of-coupons/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.332504Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/types-of-coupons/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.334769Z","level":"info","event":"\u001b[31m❌ HTTPSConnectionPool(host='www.tbank.ru', port=443): Max retries exceeded with url: /invest/help/educ","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.335078Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.336843Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/stocks-profit/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.341264Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/stocks-profit/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.342060Z","level":"info","event":"\u001b[31m❌ HTTPSConnectionPool(host='www.tbank.ru', port=443): Max retries exceeded with url: /invest/help/educ","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.342376Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.343366Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/what-is-exchange/type-of-securities/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.849943Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/what-is-exchange/type-of-securities/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.851055Z","level":"info","event":"\u001b[31m❌ HTTPSConnectionPool(host='www.tbank.ru', port=443): Max retries exceeded with url: /invest/help/educ","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.851192Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:09.851366Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/what-is-exchange/how-it-works/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:10.669402Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/what-is-exchange/how-it-works/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:10.863765Z","level":"info","event":"\u001b[31m❌ HTTPSConnectionPool(host='www.tbank.ru', port=443): Max retries exceeded with url: /invest/help/educ","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:10.870518Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:10.870691Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/what-is-exchange/exchange-types/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:11.877350Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/what-is-exchange/exchange-types/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:11.945647Z","level":"info","event":"\u001b[31m❌ HTTPSConnectionPool(host='www.tbank.ru', port=443): Max retries exceeded with url: /invest/help/educ","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:11.946361Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:11.949886Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/fundamental/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:12.961088Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/fundamental/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:13.099118Z","level":"info","event":"\u001b[31m❌ HTTPSConnectionPool(host='www.tbank.ru', port=443): Max retries exceeded with url: /invest/help/educ","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:13.105550Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:13.107761Z","level":"info","event":"\u001b[36m        [Глубина 4/4] https://www.tbank.ru/invest/help/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:14.120365Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:14.232342Z","level":"info","event":"\u001b[31m❌ HTTPSConnectionPool(host='www.tbank.ru', port=443): Max retries exceeded with url: /invest/help/ (Ca","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:14.232668Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:14.232800Z","level":"info","event":"\u001b[36m      [Глубина 3/4] https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/stocks/?card=q1","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:15.278777Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/stocks/?card=q1","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:16.409905Z","level":"info","event":"\u001b[31m❌ HTTPSConnectionPool(host='www.tbank.ru', port=443): Max retries exceeded with url: /invest/help/educ","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:16.418114Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:16.418251Z","level":"info","event":"\u001b[36m      [Глубина 3/4] https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:16.666125Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:16.830246Z","level":"info","event":"\u001b[31m❌ HTTPSConnectionPool(host='www.tbank.ru', port=443): Max retries exceeded with url: /invest/help/educ","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:16.839792Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:16.842597Z","level":"info","event":"\u001b[36m      [Глубина 3/4] https://www.tbank.ru/invest/help/brokerage/account/forts/options/?card=q1","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:18.340451Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/brokerage/account/forts/options/?card=q1","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:19.323432Z","level":"info","event":"\u001b[31m❌ HTTPSConnectionPool(host='www.tbank.ru', port=443): Max retries exceeded with url: /invest/help/brok","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:19.352904Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:19.357891Z","level":"info","event":"\u001b[36m      [Глубина 3/4] https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/stocks/?card=q5","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:20.402198Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/stocks/?card=q5","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:21.252653Z","level":"info","event":"\u001b[31m❌ HTTPSConnectionPool(host='www.tbank.ru', port=443): Max retries exceeded with url: /invest/help/educ","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:21.261942Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:21.262693Z","level":"info","event":"\u001b[36m      [Глубина 3/4] https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/dividend-yield/?card=q1","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:21.520365Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/dividend-yield/?card=q1","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:21.845791Z","level":"info","event":"\u001b[31m❌ HTTPSConnectionPool(host='www.tbank.ru', port=443): Max retries exceeded with url: /invest/help/educ","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:21.846665Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:21.846921Z","level":"info","event":"\u001b[36m      [Глубина 3/4] https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/when-buy-stocks/?card=q2","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:22.950861Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/rookie-advice/when-buy-stocks/?card=q2","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:23.091921Z","level":"info","event":"\u001b[31m❌ HTTPSConnectionPool(host='www.tbank.ru', port=443): Max retries exceeded with url: /invest/help/educ","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:23.094442Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T08:08:23.100902Z","level":"info","event":"\u001b[36m      [Глубина 3/4] https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/stocks/?card=q6","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:12:53.769808Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/stocks/?card=q6","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:12:54.130243Z","level":"info","event":"\u001b[31m❌ HTTPSConnectionPool(host='www.tbank.ru', port=443): Max retries exceeded with url: /invest/help/educ","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:04.158337Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:04.178643Z","level":"info","event":"\u001b[36m      [Глубина 3/4] https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/stocks/?card=q7","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:04.181049Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/stocks/?card=q7","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:04.181301Z","level":"info","event":"\u001b[31m❌ HTTPSConnectionPool(host='www.tbank.ru', port=443): Max retries exceeded with url: /invest/help/educ","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:04.181541Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:04.181691Z","level":"info","event":"\u001b[36m      [Глубина 3/4] https://www.tbank.ru/invest/help/educate/how-it-works/what-is-exchange/investment-features/?card=q4","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:04.182178Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/what-is-exchange/investment-features/?card=q4","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:04.182478Z","level":"info","event":"\u001b[31m❌ HTTPSConnectionPool(host='www.tbank.ru', port=443): Max retries exceeded with url: /invest/help/educ","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:04.182788Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:04.182907Z","level":"info","event":"\u001b[36m      [Глубина 3/4] https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/coupon-yield/?card=q1","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:04.183147Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/coupon-yield/?card=q1","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:04.186701Z","level":"info","event":"\u001b[31m❌ HTTPSConnectionPool(host='www.tbank.ru', port=443): Max retries exceeded with url: /invest/help/educ","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:04.187403Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:04.192245Z","level":"info","event":"\u001b[36m      [Глубина 3/4] https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/stocks/?card=q4","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:04.192849Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/stocks/?card=q4","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:04.193040Z","level":"info","event":"\u001b[31m❌ HTTPSConnectionPool(host='www.tbank.ru', port=443): Max retries exceeded with url: /invest/help/educ","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:04.193370Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:04.194043Z","level":"info","event":"\u001b[36m      [Глубина 3/4] https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/stocks/?card=q3","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:04.194564Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/educate/how-it-works/ways-to-invest/stocks/?card=q3","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:04.194828Z","level":"info","event":"\u001b[31m❌ HTTPSConnectionPool(host='www.tbank.ru', port=443): Max retries exceeded with url: /invest/help/educ","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:04.195285Z","level":"info","event":"","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:04.196056Z","level":"info","event":"\u001b[36m      [Глубина 3/4] https://www.tbank.ru/invest/help/brokerage/account/trade-on-bs/buy-n-sell/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:04.904142Z","level":"info","event":"\u001b[33m⬇️  https://www.tbank.ru/invest/help/brokerage/account/trade-on-bs/buy-n-sell/","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:08.047353Z","level":"info","event":"\u001b[32m✅ 805895 байт","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:09.247985Z","level":"info","event":"\u001b[32m   261 параграфов, 17456 символов","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:13.152565Z","level":"info","event":"\u001b[36m💾 028_как_покупать_и_продавать_ценные_бумаги_и_валюту.json","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:13.358278Z","level":"info","event":"\u001b[32m✅ Статья #28: Как покупать и продавать ценные бумаги и валюту","logger":"task.stdout"}
+{"timestamp":"2026-06-10T09:13:15.439874Z","level":"error","event":"\r                                                          \u001b[A","logger":"task.stderr"}
+{"timestamp":"2026-06-10T09:13:17.990873Z","level":"error","event":"\rФильтрация ссылок:   0%|          | 0/392 [00:00<?, ?it/s]\u001b[A","logger":"task.stderr"}
