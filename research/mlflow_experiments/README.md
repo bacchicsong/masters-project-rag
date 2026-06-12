@@ -1,46 +1,36 @@
 # MLflow experiments
 
-Четыре эксперимента: эмбеддинги, retrieval, чанкинг, overlap.  
-Eval на вопросах из `research/data-collection/Q_A_articles.zip`, корпус — `data/tbank_articles_clean.json` (640 статей, 625 пар вопрос-статья).
+Три эксперимента: эмбеддинги, чанкинг, overlap.  
+Eval на вопросах из `research/data-collection/Q_A_articles.zip`, корпус - `data/tbank_articles_clean.json`.
 
-MLflow: http://localhost:5000
+| # | Файл | MLflow experiment |
+|---|------|-------------------|
+| 1 | `experiment_1_embedding_comparison.py` | `rag-experiments-golden-embedding-comparison` |
+| 2 | `experiment_2_chunking_strategies.py` | `rag-experiments-golden-chunking-strategies` |
+| 3 | `experiment_3_chunk_overlap.py` | `rag-experiments-golden-chunk-overlap` |
 
-## Запуск
+Метрики считаются для k = 1, 3, 5, 8. В таблицах ниже - P@1, P@3, P@5 и R@5.
 
-```bash
-docker compose up -d minio mlflow
-cd research/mlflow_experiments
-python run_all_experiments.py --limit 20
-```
+### Как читать P@K и R@K
 
-`--mock` если нужны фейковые данные, `--select 1 2` для выборочного запуска.
+Retrieval возвращает top-K документов (или статей, если агрегируем по чанкам). На каждый вопрос в golden set ровно **одна** релевантная статья.
 
-Метрики считаются для k = 1, 3, 5, 8. В таблицах ниже P@1, P@3, P@5 и R@5.
+**R@K (Recall@K)** - доля вопросов, для которых нужная статья есть где-то в top-K. Это hit rate: «нашли ли мы правильный документ, если смотреть на K первых результатов». R@5 = 0.60 значит, что в 12 из 20 запросов статья попала в пятёрку.
 
-У нас на каждый вопрос одна релевантная статья, поэтому **R@k = доля запросов, где статья попала в top-k** (по сути hit rate). P@k при этом меньше: даже если статья в top-5, precision = 1/5 = 0.2 на этом запросе.
+**P@K (Precision@K)** - средняя доля релевантных среди K выданных позиций. Формула на запрос: (число релевантных в top-K) / K. При одной релевантной статье максимум P@5 = 0.2 (одна из пяти). Если статья не попала в top-K, P@K = 0. Поэтому P@K обычно ниже R@K: recall отвечает «попали ли», precision - «насколько «чистой» была выдача».
 
 ## Результаты (20 запросов, CPU)
 
-Exp 1 — только MiniLM и e5-small из пяти моделей в конфиге.
+Exp 1 - только MiniLM и e5-small из пяти моделей в конфиге.
 
-### Exp 1 — embeddings
+### Exp 1 - embeddings
 
-| модель | P@1 | P@3 | P@5 | R@5 | MRR |
-|--------|-----|-----|-----|-----|-----|
-| e5-small | 0.45 | 0.22 | 0.17 | 0.85 | 0.61 |
-| MiniLM | 0.40 | 0.18 | 0.12 | 0.60 | 0.49 |
+| модель | P@1 | P@3 | P@5 | R@5 |
+|--------|-----|-----|-----|-----|
+| e5-small | 0.45 | 0.22 | 0.17 | 0.85 |
+| MiniLM | 0.40 | 0.18 | 0.12 | 0.60 |
 
-### Exp 2 — retrieval (MiniLM, full text)
-
-| стратегия | P@1 | P@3 | P@5 | R@5 | MRR |
-|-----------|-----|-----|-----|-----|-----|
-| BM25 | 0.35 | 0.25 | 0.15 | 0.75 | 0.56 |
-| hybrid k=20 | 0.40 | 0.20 | 0.13 | 0.65 | 0.55 |
-| dense | 0.40 | 0.18 | 0.12 | 0.60 | 0.49 |
-
-hybrid k=50/100 ≈ dense по P@5.
-
-### Exp 3 — chunking (MiniLM)
+### Exp 2 - chunking (MiniLM)
 
 document-level:
 
@@ -50,7 +40,7 @@ document-level:
 | title_only | 0.20 | 0.07 | 0.05 | 0.25 |
 | title_headings | 0.10 | 0.05 | 0.03 | 0.15 |
 
-chunk size (full text, поиск по чанкам):
+chunk size (full text, поиск по чанкам, overlap=50):
 
 | size | P@1 | P@3 | P@5 | R@5 |
 |------|-----|-----|-----|-----|
@@ -58,8 +48,15 @@ chunk size (full text, поиск по чанкам):
 | 512 | 0.20 | 0.13 | 0.09 | 0.45 |
 | 256 | 0.15 | 0.12 | 0.08 | 0.40 |
 
-### Exp 4 — chunk overlap (MiniLM, chunk_size=512, full text)
+### Exp 3 - chunk overlap (MiniLM, chunk_size=512, full text)
 
-overlap: 0, 50, 100, 200 символов. Запуск: `python experiment_4_chunk_overlap.py` или `--select 4`.
+overlap в символах: 0, 50, 100, 200.
 
-Кратко: e5-small и BM25 выигрывают у dense/MiniLM; full text лучше урезанных стратегий; чанки хуже document-level.
+| overlap | P@1 | P@3 | P@5 | R@5 |
+|---------|-----|-----|-----|-----|
+| 0 | 0.15 | 0.07 | 0.05 | 0.25 |
+| 50 | 0.20 | 0.13 | 0.09 | 0.45 |
+| 100 | 0.25 | 0.17 | 0.12 | 0.60 |
+| 200 | 0.25 | 0.13 | 0.08 | 0.40 |
+
+Кратко: e5-small лучше MiniLM; full text лучше урезанных стратегий; document-level лучше чанков; overlap помогает до ~100 символов, при 200 метрики падают.
