@@ -18,16 +18,12 @@ os.environ["AWS_SECRET_ACCESS_KEY"] = "minioadmin"
 os.environ["MLFLOW_S3_IGNORE_TLS"] = "true"
 
 # === Experiment names ===
-EXPERIMENT_BASE_NAME = "rag-experiments"
+EXPERIMENT_BASE_NAME = "rag-experiments-golden"
 
-# === Registered experiment name mapping ===
 EXPERIMENTS = {
     "embedding-comparison": f"{EXPERIMENT_BASE_NAME}-embedding-comparison",
-    "retrieval-strategies": f"{EXPERIMENT_BASE_NAME}-retrieval-strategies",
     "chunking-strategies": f"{EXPERIMENT_BASE_NAME}-chunking-strategies",
-    "prompt-templates": f"{EXPERIMENT_BASE_NAME}-prompt-templates",
-    "end-to-end": f"{EXPERIMENT_BASE_NAME}-end-to-end",
-    "performance-benchmark": f"{EXPERIMENT_BASE_NAME}-performance-benchmark",
+    "chunk-overlap": f"{EXPERIMENT_BASE_NAME}-chunk-overlap",
 }
 
 

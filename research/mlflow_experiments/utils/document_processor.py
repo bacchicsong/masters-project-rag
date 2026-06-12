@@ -114,7 +114,12 @@ class DocumentProcessor:
             if len(chunk) >= min_chunk_size:
                 chunks.append(chunk)
 
-            start = end - overlap
+            if end >= len(text):
+                break
+            new_start = end - overlap
+            if new_start <= start:
+                new_start = end
+            start = new_start
 
         return chunks
 

@@ -5,8 +5,8 @@ Creates the MinIO bucket if it doesn't exist.
 
 Usage:
     python run_all_experiments.py                    # Run all experiments
-    python run_all_experiments.py --select 1 3 5     # Run only experiments 1, 3, 5
-    python run_all_experiments.py --skip 2 4         # Skip experiments 2, 4
+    python run_all_experiments.py --select 1 3       # Run only experiments 1, 3
+    python run_all_experiments.py --skip 2           # Skip experiment 2
     python run_all_experiments.py --quick            # Run with minimal configurations only
 """
 import argparse
@@ -20,22 +20,13 @@ from typing import List, Optional
 EXPERIMENTS = [
     (1, "Embedding Model Comparison",
      "experiment_1_embedding_comparison",
-     "Compare different embedding models (MiniLM, e5, distiluse) for retrieval quality"),
-    (2, "Retrieval Strategies",
-     "experiment_2_retrieval_strategies",
-     "Compare dense vs sparse (BM25) vs hybrid retrieval approaches"),
-    (3, "Chunking / Context Strategies",
-     "experiment_3_chunking_strategies",
-     "Test text extraction strategies and chunk size effects"),
-    (4, "Prompt Templates",
-     "experiment_4_prompt_templates",
-     "Compare prompt templates and generation parameters"),
-    (5, "End-to-End RAG Evaluation",
-     "experiment_5_end_to_end",
-     "Full pipeline evaluation combining retrieval + generation"),
-    (6, "Performance Benchmark",
-     "experiment_6_performance_benchmark",
-     "Profile resource utilization and latency for RAG components"),
+     "Compare different embedding models for retrieval quality"),
+    (2, "Chunking / Context Strategies",
+     "experiment_2_chunking_strategies",
+     "Text extraction strategies and chunk size effects"),
+    (3, "Chunk Overlap",
+     "experiment_3_chunk_overlap",
+     "Chunk overlap at fixed chunk size"),
 ]
 
 
@@ -150,8 +141,16 @@ def main():
         help="Run with minimal configurations (faster execution)"
     )
     parser.add_argument(
+        "--mock", action="store_true",
+        help="Use synthetic mock dataset instead of Q_A_articles golden set",
+    )
+    parser.add_argument(
+        "--limit", type=int, default=None,
+        help="Limit number of golden set queries per experiment",
+    )
+    parser.add_argument(
         "--list", action="store_true",
-        help="List available experiments and exit"
+        help="List available experiments and exit",
     )
 
     args = parser.parse_args()
@@ -161,6 +160,27 @@ def main():
     if args.list:
         print_experiment_list()
         return
+
+    if not args.mock:
+        try:
+            from utils.data_loader import load_golden_eval_set
+            _, _, stats = load_golden_eval_set(num_queries=args.limit)
+            print(f"Golden set: {stats['used_queries']} queries, corpus from tbank_articles_clean.json\n")
+        except Exception as e:
+            print(f"[WARN] Golden set check failed: {e}\n")
+
+    if args.limit:
+        import experiment_1_embedding_comparison as e1
+        import experiment_2_chunking_strategies as e2
+        import experiment_3_chunk_overlap as e3
+        e1.NUM_QUERIES = args.limit
+        e2.NUM_QUERIES = args.limit
+        e3.NUM_QUERIES = args.limit
+
+    if args.mock:
+        from utils import data_loader
+        data_loader.USE_MOCK = True
+        print("Using mock dataset\n")
 
     # Print experiment list
     print_experiment_list()

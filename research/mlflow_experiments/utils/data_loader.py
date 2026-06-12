@@ -1,30 +1,16 @@
-"""
-Data loading utilities for RAG experiments.
-Loads documents from JSON files, creates test queries with ground truth.
-"""
 import json
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+
+from utils.golden_set_loader import attach_ground_truth, load_qa_from_zip
 
 
 def load_documents(
     data_dir: str = "data",
     max_docs: Optional[int] = None,
-    file_pattern: str = "*.json"
+    file_pattern: str = "*.json",
 ) -> List[Dict[str, Any]]:
-    """
-    Load documents from JSON files in a directory.
-
-    Args:
-        data_dir: Directory containing JSON files (relative to project root)
-        max_docs: Maximum number of documents to load (None = all)
-        file_pattern: Glob pattern for file matching
-
-    Returns:
-        List of document dicts with 'title', 'sections', 'url' keys
-    """
-    # Resolve relative to the research directory or given dir
-    project_root = Path(__file__).resolve().parent.parent.parent.parent  # goes to project root
+    project_root = Path(__file__).resolve().parent.parent.parent.parent
     json_dir = project_root / data_dir if not Path(data_dir).is_absolute() else Path(data_dir)
 
     all_docs: List[Dict[str, Any]] = []
@@ -42,7 +28,6 @@ def load_documents(
                 if "sections" in data:
                     all_docs.append(data)
                 else:
-                    # Treat as a single document
                     all_docs.append(data)
             elif isinstance(data, list):
                 for item in data:
@@ -58,34 +43,65 @@ def load_documents(
         except Exception as e:
             print(f"[WARN] Error loading {file_path.name}: {e}")
 
+    for i, doc in enumerate(all_docs):
+        if "id" not in doc:
+            doc["id"] = f"doc_{i}"
+
     print(f"[FILE] Loaded {len(all_docs)} documents from {json_dir}")
     return all_docs
 
 
+USE_MOCK = False
+
+
+def load_golden_eval_set(
+    num_queries: Optional[int] = None,
+    zip_path: Optional[str] = None,
+    use_mock: Optional[bool] = None,
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], Dict[str, Any]]:
+    mock = USE_MOCK if use_mock is None else use_mock
+    if mock:
+        docs, queries = _load_mock_data(num_queries)
+        stats = {
+            "total_qa": len(queries),
+            "matched_queries": len(queries),
+            "unmatched_queries": 0,
+            "used_queries": len(queries),
+            "unmatched_titles": [],
+        }
+        return docs, queries, stats
+
+    docs = load_documents(file_pattern="tbank_articles_clean.json")
+    qa_records = load_qa_from_zip(Path(zip_path) if zip_path else None)
+    test_queries, stats = attach_ground_truth(qa_records, docs)
+
+    if num_queries:
+        test_queries = test_queries[:num_queries]
+    stats["used_queries"] = len(test_queries)
+
+    print(
+        f"[GOLDEN] matched {stats['matched_queries']}/{stats['total_qa']} queries, "
+        f"using {stats['used_queries']} for eval"
+    )
+    if stats["unmatched_queries"]:
+        print(f"[GOLDEN] unmatched: {stats['unmatched_queries']}")
+
+    return docs, test_queries, stats
+
+
 def load_test_queries(
-    use_mock: bool = True,
-    num_queries: Optional[int] = None
+    use_mock: bool = False,
+    num_queries: Optional[int] = None,
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-    """
-    Load or generate test queries with ground truth document associations.
-
-    Args:
-        use_mock: If True, use synthetic mock data. If False, attempt to load real test data.
-        num_queries: Limit number of queries (None = all)
-
-    Returns:
-        Tuple of (documents, test_queries)
-        - documents: list of document dicts
-        - test_queries: list of dicts with 'query', 'query_id', 'relevant_doc_ids' keys
-    """
     if use_mock:
-        return _load_mock_data(num_queries)
-    else:
-        return _load_real_data(num_queries)
+        docs, queries = _load_mock_data(num_queries)
+        return docs, queries
+
+    docs, queries, _ = load_golden_eval_set(num_queries=num_queries)
+    return docs, queries
 
 
 def _load_mock_data(num_queries: Optional[int] = None) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-    """Generate synthetic documents and test queries for controlled evaluation."""
     docs = [
         {
             "id": "doc_1",
@@ -93,7 +109,7 @@ def _load_mock_data(num_queries: Optional[int] = None) -> Tuple[List[Dict[str, A
             "url": "docs/broker",
             "sections": [
                 {"heading": "Что такое брокерский счет", "content": ["Брокерский счет позволяет торговать акциями и валютой самостоятельно.", "Для открытия счета нужен паспорт."]},
-            ]
+            ],
         },
         {
             "id": "doc_2",
@@ -101,7 +117,7 @@ def _load_mock_data(num_queries: Optional[int] = None) -> Tuple[List[Dict[str, A
             "url": "docs/iis",
             "sections": [
                 {"heading": "Преимущества ИИС", "content": ["ИИС дает право на налоговый вычет 13% от взносов (тип А).", "Деньги нельзя снимать 3 года без потери льгот."]},
-            ]
+            ],
         },
         {
             "id": "doc_3",
@@ -109,7 +125,7 @@ def _load_mock_data(num_queries: Optional[int] = None) -> Tuple[List[Dict[str, A
             "url": "docs/taxes",
             "sections": [
                 {"heading": "Налог на доход", "content": ["Налог на доход от инвестиций составляет 13% для резидентов.", "Брокер выступает налоговым агентом и удерживает налог автоматически."]},
-            ]
+            ],
         },
         {
             "id": "doc_4",
@@ -117,7 +133,7 @@ def _load_mock_data(num_queries: Optional[int] = None) -> Tuple[List[Dict[str, A
             "url": "docs/dividends",
             "sections": [
                 {"heading": "Дивидендная доходность", "content": ["Дивиденды — это часть прибыли компании, распределяемая между акционерами.", "Налог на дивиденды удерживается у источника выплаты."]},
-            ]
+            ],
         },
         {
             "id": "doc_5",
@@ -125,7 +141,7 @@ def _load_mock_data(num_queries: Optional[int] = None) -> Tuple[List[Dict[str, A
             "url": "docs/etf",
             "sections": [
                 {"heading": "Что такое ETF", "content": ["ETF (Exchange Traded Fund) — биржевой инвестиционный фонд.", "БПИФ — российский аналог ETF."]},
-            ]
+            ],
         },
         {
             "id": "doc_6",
@@ -133,7 +149,7 @@ def _load_mock_data(num_queries: Optional[int] = None) -> Tuple[List[Dict[str, A
             "url": "docs/ofz",
             "sections": [
                 {"heading": "Государственные облигации", "content": ["ОФЗ — долговые ценные бумаги, выпускаемые Министерством финансов РФ.", "Считаются одним из самых надежных инструментов."]},
-            ]
+            ],
         },
         {
             "id": "doc_7",
@@ -141,7 +157,7 @@ def _load_mock_data(num_queries: Optional[int] = None) -> Tuple[List[Dict[str, A
             "url": "docs/stocks",
             "sections": [
                 {"heading": "Типы акций", "content": ["Обыкновенные акции дают право голоса на собрании акционеров.", "Привилегированные акции гарантируют фиксированный дивиденд."]},
-            ]
+            ],
         },
         {
             "id": "doc_8",
@@ -149,7 +165,7 @@ def _load_mock_data(num_queries: Optional[int] = None) -> Tuple[List[Dict[str, A
             "url": "docs/pif",
             "sections": [
                 {"heading": "Как работает ПИФ", "content": ["ПИФ — это форма коллективного инвестирования.", "Управляющая компания инвестирует средства пайщиков в различные активы."]},
-            ]
+            ],
         },
     ]
 
@@ -170,25 +186,4 @@ def _load_mock_data(num_queries: Optional[int] = None) -> Tuple[List[Dict[str, A
         test_queries = test_queries[:num_queries]
 
     print(f"[LIST] Generated {len(test_queries)} mock test queries with {len(docs)} documents")
-    return docs, test_queries
-
-
-def _load_real_data(num_queries: Optional[int] = None) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-    """Attempt to load real data from the project's data directory."""
-    docs = load_documents()
-
-    # For real data, we'll create a generic test query set
-    # (In production, this would come from a labeled dataset)
-    test_queries = [
-        {"query_id": "q1", "query": "Что такое акция?", "relevant_doc_ids": []},
-        {"query_id": "q2", "query": "Как продать акцию?", "relevant_doc_ids": []},
-        {"query_id": "q3", "query": "Что такое ПИФ?", "relevant_doc_ids": []},
-        {"query_id": "q4", "query": "Как работает брокерский счет?", "relevant_doc_ids": []},
-        {"query_id": "q5", "query": "Что такое облигации?", "relevant_doc_ids": []},
-    ]
-
-    if num_queries:
-        test_queries = test_queries[:num_queries]
-
-    print(f"[LIST] Loaded {len(docs)} real documents, {len(test_queries)} test queries")
     return docs, test_queries

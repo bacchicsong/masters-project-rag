@@ -1,7 +1,5 @@
 """
-Evaluation metrics for RAG system experiments.
-- Retrieval metrics: Precision@k, Recall@k, MRR, NDCG
-- Generation metrics: response length, latency, overlap
+Evaluation metrics for RAG retrieval experiments.
 """
 from typing import List, Dict, Set, Union, Optional
 import numpy as np
@@ -137,88 +135,5 @@ def compute_retrieval_metrics(
     all_relevant = list(ground_truth.values())
     all_retrieved = [predictions[q_id] for q_id in ground_truth if q_id in predictions]
     metrics["MRR"] = mean_reciprocal_rank(all_relevant, all_retrieved)
-
-    return metrics
-
-
-def compute_generation_metrics(
-    responses: List[str],
-    reference_answers: Optional[List[str]] = None,
-    latencies: Optional[List[float]] = None
-) -> Dict[str, float]:
-    """
-    Compute generation quality metrics.
-
-    Args:
-        responses: List of generated response texts
-        reference_answers: Optional list of reference answers (for reference-based metrics)
-        latencies: Optional list of generation latencies in seconds
-
-    Returns:
-        Dict with metrics
-    """
-    metrics = {}
-
-    # Response length statistics
-    response_lengths = [len(r.split()) for r in responses]
-    metrics["avg_response_length_tokens"] = float(np.mean(response_lengths))
-    metrics["min_response_length_tokens"] = float(np.min(response_lengths))
-    metrics["max_response_length_tokens"] = float(np.max(response_lengths))
-    metrics["std_response_length_tokens"] = float(np.std(response_lengths))
-
-    # Response character lengths
-    char_lengths = [len(r) for r in responses]
-    metrics["avg_response_length_chars"] = float(np.mean(char_lengths))
-
-    # Latency metrics
-    if latencies:
-        metrics["avg_latency_seconds"] = float(np.mean(latencies))
-        metrics["min_latency_seconds"] = float(np.min(latencies))
-        metrics["max_latency_seconds"] = float(np.max(latencies))
-        metrics["std_latency_seconds"] = float(np.std(latencies))
-        metrics["p95_latency_seconds"] = float(np.percentile(latencies, 95))
-        metrics["p99_latency_seconds"] = float(np.percentile(latencies, 99))
-
-    return metrics
-
-
-def compute_performance_metrics(
-    wall_time: float,
-    peak_memory_kib: float,
-    rss_before: Optional[float] = None,
-    rss_after: Optional[float] = None,
-    gpu_before: Optional[float] = None,
-    gpu_after: Optional[float] = None,
-    num_docs: Optional[int] = None,
-) -> Dict[str, float]:
-    """
-    Compute performance/resource metrics.
-
-    Args:
-        wall_time: Wall clock time in seconds
-        peak_memory_kib: Peak Python memory allocation in KiB
-        rss_before: RSS memory before in MB
-        rss_after: RSS memory after in MB
-        gpu_before: GPU memory before in MB
-        gpu_after: GPU memory after in MB
-        num_docs: Number of documents processed (for throughput)
-
-    Returns:
-        Dict with performance metrics
-    """
-    metrics = {
-        "wall_time_s": wall_time,
-        "peak_memory_kib": peak_memory_kib,
-        "peak_memory_mb": peak_memory_kib / 1024.0,
-    }
-
-    if rss_before is not None and rss_after is not None:
-        metrics["rss_delta_mb"] = rss_after - rss_before
-
-    if gpu_before is not None and gpu_after is not None:
-        metrics["gpu_delta_mb"] = gpu_after - gpu_before
-
-    if num_docs and wall_time > 0:
-        metrics["throughput_docs_per_sec"] = num_docs / wall_time
 
     return metrics
