@@ -8,7 +8,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 from mlflow_config import setup_experiment
 from utils.data_loader import load_golden_eval_set
-from utils.document_processor import DocumentProcessor, get_text_by_strategy
+from utils.document_processor import chunk_text, get_text_by_strategy
 from utils.eval_runner import build_ground_truth
 from utils.metrics import compute_retrieval_metrics
 
@@ -41,7 +41,7 @@ def run_experiment():
         all_chunks = []
         chunk_to_doc_map = []
         for doc_idx, text in enumerate(base_texts):
-            chunks = DocumentProcessor.chunk_text(text, chunk_size=CHUNK_SIZE, overlap=overlap)
+            chunks = chunk_text(text, chunk_size=CHUNK_SIZE, overlap=overlap)
             all_chunks.extend(chunks)
             chunk_to_doc_map.extend([doc_idx] * len(chunks))
 

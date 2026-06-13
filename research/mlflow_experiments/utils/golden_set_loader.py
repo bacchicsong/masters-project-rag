@@ -28,7 +28,7 @@ def fix_mojibake(text):
     return text
 
 
-def extract_article_title(content, filename):
+def _article_title(content, filename):
     m = re.search(r'по статье [«"](.+?)[»"]', content)
     if m:
         return fix_mojibake(m.group(1).strip())
@@ -38,42 +38,31 @@ def extract_article_title(content, filename):
     return fix_mojibake(Path(name).stem.replace(".json", ""))
 
 
-def parse_questions(content):
-    return re.findall(r"##\s*Вопрос\s*\d+:\s*(.+?)\n", content)
-
-
 def load_qa_from_zip(zip_path=None):
     path = Path(zip_path) if zip_path else GOLDEN_ZIP
     records = []
+
     with zipfile.ZipFile(path) as zf:
         for name in zf.namelist():
             if not name.endswith(".json") or "__MACOSX" in name or "/._" in name:
                 continue
             data = json.loads(zf.read(name))
             content = data.get("content", "")
-            title = extract_article_title(content, name)
+            title = _article_title(content, name)
             if not title:
                 continue
-            for i, q in enumerate(parse_questions(content), 1):
+            for i, q in enumerate(re.findall(r"##\s*Вопрос\s*\d+:\s*(.+?)\n", content), 1):
                 slug = re.sub(r"\W+", "_", normalize_title(title))[:40]
                 records.append({
                     "query_id": f"{slug}_{i}",
                     "query": q.strip(),
                     "article_title": title,
                 })
+
     return records
 
 
-def build_title_index(docs):
-    index = {}
-    for doc in docs:
-        norm = normalize_title(doc.get("title", ""))
-        if norm:
-            index[norm] = doc["id"]
-    return index
-
-
-def match_doc_id(article_title, title_index, docs):
+def _match_doc_id(article_title, title_index, docs):
     norm = normalize_title(article_title)
     if norm in title_index:
         return title_index[norm]
@@ -84,30 +73,21 @@ def match_doc_id(article_title, title_index, docs):
 
     for doc in docs:
         doc_norm = normalize_title(doc.get("title", ""))
-        if norm in doc_norm or doc_norm in norm:
-            return doc["id"]
-        if fixed in doc_norm or doc_norm in fixed:
+        if norm in doc_norm or doc_norm in norm or fixed in doc_norm or doc_norm in fixed:
             return doc["id"]
 
     close = get_close_matches(norm, list(title_index.keys()), n=1, cutoff=0.82)
-    if close:
-        return title_index[close[0]]
-    return None
+    return title_index[close[0]] if close else None
 
 
 def attach_ground_truth(qa_records, docs):
-    title_index = build_title_index(docs)
-    matched = []
-    unmatched = []
+    title_index = {normalize_title(d.get("title", "")): d["id"] for d in docs if d.get("title")}
+    matched, unmatched = [], []
 
     for rec in qa_records:
-        doc_id = match_doc_id(rec["article_title"], title_index, docs)
-        item = dict(rec)
-        item["relevant_doc_ids"] = [doc_id] if doc_id else []
-        if doc_id:
-            matched.append(item)
-        else:
-            unmatched.append(item)
+        doc_id = _match_doc_id(rec["article_title"], title_index, docs)
+        item = {**rec, "relevant_doc_ids": [doc_id] if doc_id else []}
+        (matched if doc_id else unmatched).append(item)
 
     stats = {
         "total_qa": len(qa_records),
