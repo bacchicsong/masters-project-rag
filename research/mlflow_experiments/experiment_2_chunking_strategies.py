@@ -40,13 +40,13 @@ def encode_search_evaluate(model, doc_ids, doc_texts, query_texts, query_ids, gr
             predictions[qid] = [doc_ids[idx] for idx in top_indices]
 
         metrics = compute_retrieval_metrics(ground_truth, predictions, K_VALUES)
-        metrics["avg_search_latency_s"] = float(np.mean(search_times))
-        metrics["p95_search_latency_s"] = float(np.percentile(search_times, 95))
+        metrics["avg_search_latency_s"] = np.mean(search_times)
+        metrics["p95_search_latency_s"] = np.percentile(search_times, 95)
         doc_lengths = [len(t.split()) for t in doc_texts]
-        metrics["avg_doc_length_tokens"] = float(np.mean(doc_lengths))
+        metrics["avg_doc_length_tokens"] = np.mean(doc_lengths)
         mlflow.log_metrics({k.replace("@", "_at_"): v for k, v in metrics.items()})
         mlflow.log_metric("golden_matched_queries", golden_stats["matched_queries"])
-        print(f"   {run_name}: P@5={metrics['mean_P@5']:.3f} R@5={metrics['mean_R@5']:.3f}")
+        print(f"   {run_name}: P@5={metrics['mean_P@5']} R@5={metrics['mean_R@5']}")
         return metrics
 
 
@@ -130,14 +130,13 @@ def run_experiment():
                 search_times.append(time.perf_counter() - start)
 
             metrics = compute_retrieval_metrics(ground_truth, predictions, K_VALUES)
-            metrics["avg_search_latency_s"] = float(np.mean(search_times))
-            metrics["p95_search_latency_s"] = float(np.percentile(search_times, 95))
+            metrics["avg_search_latency_s"] = np.mean(search_times)
+            metrics["p95_search_latency_s"] = np.percentile(search_times, 95)
             metrics["num_chunks"] = len(all_chunks)
-            avg_chunk_length = float(np.mean([len(c.split()) for c in all_chunks]))
-            metrics["avg_chunk_length_tokens"] = avg_chunk_length
+            metrics["avg_chunk_length_tokens"] = np.mean([len(c.split()) for c in all_chunks])
             mlflow.log_metrics({k.replace("@", "_at_"): v for k, v in metrics.items()})
             mlflow.log_metric("golden_matched_queries", golden_stats["matched_queries"])
-            print(f"   chunk={chunk_size}: P@5={metrics['mean_P@5']:.3f} chunks={len(all_chunks)}")
+            print(f"   chunk={chunk_size}: P@5={metrics['mean_P@5']} chunks={len(all_chunks)}")
 
     print(f"\n[COMPLETE] {experiment_name}")
 

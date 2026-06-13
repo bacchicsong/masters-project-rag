@@ -96,7 +96,7 @@ def run_experiment():
                 extra={"golden_stats": golden_stats},
             )
 
-            print(f"   P@5={metrics['mean_P@5']:.4f} R@5={metrics['mean_R@5']:.4f} MRR={metrics['MRR']:.4f}")
+            print(f"   P@5={metrics['mean_P@5']} R@5={metrics['mean_R@5']} MRR={metrics['MRR']}")
 
     print(f"\n[COMPLETE] {experiment_name}")
 

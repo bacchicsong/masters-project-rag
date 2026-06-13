@@ -45,8 +45,8 @@ def run_dense_retrieval(
         predictions[qid] = [doc_ids[j] for j in idx]
 
     metrics = compute_retrieval_metrics(ground_truth, predictions, k_values)
-    metrics["avg_search_latency_s"] = float(np.mean(latencies))
-    metrics["p95_search_latency_s"] = float(np.percentile(latencies, 95))
+    metrics["avg_search_latency_s"] = np.mean(latencies)
+    metrics["p95_search_latency_s"] = np.percentile(latencies, 95)
     return {"metrics": metrics, "predictions": predictions, "doc_embeddings": doc_emb}
 
 

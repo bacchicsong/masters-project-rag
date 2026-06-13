@@ -80,13 +80,13 @@ def run_experiment():
                 search_times.append(time.perf_counter() - start)
 
             metrics = compute_retrieval_metrics(ground_truth, predictions, K_VALUES)
-            metrics["avg_search_latency_s"] = float(np.mean(search_times))
-            metrics["p95_search_latency_s"] = float(np.percentile(search_times, 95))
+            metrics["avg_search_latency_s"] = np.mean(search_times)
+            metrics["p95_search_latency_s"] = np.percentile(search_times, 95)
             metrics["num_chunks"] = len(all_chunks)
-            metrics["avg_chunk_length_tokens"] = float(np.mean([len(c.split()) for c in all_chunks]))
+            metrics["avg_chunk_length_tokens"] = np.mean([len(c.split()) for c in all_chunks])
             mlflow.log_metrics({k.replace("@", "_at_"): v for k, v in metrics.items()})
             mlflow.log_metric("golden_matched_queries", golden_stats["matched_queries"])
-            print(f"   overlap={overlap}: P@5={metrics['mean_P@5']:.3f} chunks={len(all_chunks)}")
+            print(f"   overlap={overlap}: P@5={metrics['mean_P@5']} chunks={len(all_chunks)}")
 
     print(f"\n[COMPLETE] {experiment_name}")
 
