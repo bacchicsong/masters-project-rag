@@ -81,21 +81,21 @@ async def get_stats(
 
     return StatsResponseDTO(
         total_queries=len(history),
-        mean_time=mean_time,
+        mean_time=float(mean_time),
         quantiles={
-            "50%": q50,
-            "95%": q95,
-            "99%": q99,
+            "50%": float(q50),
+            "95%": float(q95),
+            "99%": float(q99),
         },
         query_stats={
-            "avg_query_len": mean_len,
-            "max_query_len": max(lenghts),
-            "min_query_len": min(lenghts),
+            "avg_query_len": float(mean_len),
+            "max_query_len": float(max(lenghts)),
+            "min_query_len": float(min(lenghts)),
         },
     )
 
 
-@router.post("/health")
+@router.get("/health")
 async def health_check() -> dict[str, str]:
     return {"status": "ok"}
 

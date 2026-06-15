@@ -1,29 +1,10 @@
-import json
 from pathlib import Path
 
 from infrastructure.db.qdrand import init_qdrant, insert_document
+from infrastructure.db.json_loader import load_json_files
 from infrastructure.di.dependencies import get_logger
 from config.config import RAG_CONFIG
 
-
-def load_json_files(directory: str) -> list[dict[str, str]]:
-    json_dir = Path(directory)
-    all_docs = []
-
-    for file in json_dir.glob("*.json"):
-        with file.open("r", encoding="utf-8") as f:
-            data = json.load(f)
-            if isinstance(data, dict):
-                if "sections" in data:
-                    all_docs.extend(data["sections"])
-            elif isinstance(data, list):
-                for item in data:
-                    if isinstance(item, dict) and "sections" in item:
-                        all_docs.extend(item["sections"])
-            else:
-                raise ValueError(f"Unsupported file format in {file.name}")
-
-    return all_docs
 
 def run():
     logger = get_logger()
