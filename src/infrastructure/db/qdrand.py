@@ -14,6 +14,9 @@ EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12
 FINE_TUNED_MODEL_PATH = str(Path(__file__).parent.parent.parent / "models" / "fine_tuned_bi_encoder")
 USE_FINE_TUNED = False
 
+# ── Cached embedding model (singleton) ──────────────────────────────
+_embedded_model: "SentenceTransformer | None" = None
+
 def chunk_text(text, size=100, overlap=20):
     words = text.split()
     chunks = []
@@ -33,13 +36,15 @@ def get_train_examples():
 
 
 def get_embedded_model() -> SentenceTransformer:
-    if USE_FINE_TUNED and os.path.isdir(FINE_TUNED_MODEL_PATH):
-        model = SentenceTransformer(FINE_TUNED_MODEL_PATH)
-        return model
+    global _embedded_model
+    if _embedded_model is not None:
+        return _embedded_model
 
-    # Load the base pre-trained model directly (no fine-tuning)
-    model = SentenceTransformer(EMBEDDING_MODEL_NAME)
-    return model
+    if USE_FINE_TUNED and os.path.isdir(FINE_TUNED_MODEL_PATH):
+        _embedded_model = SentenceTransformer(FINE_TUNED_MODEL_PATH)
+    else:
+        _embedded_model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+    return _embedded_model
 
 
 def init_qdrant(logger) -> QdrantClient:
@@ -60,11 +65,19 @@ def init_qdrant(logger) -> QdrantClient:
     return qdrant
 
 
-def insert_document(qdrant: QdrantClient, collection_name: str, doc: dict, idx: int):
-    model = get_embedded_model()
+def insert_document(
+    qdrant: QdrantClient,
+    collection_name: str,
+    doc: dict,
+    idx: int,
+    *,
+    model: SentenceTransformer | None = None,
+):
+    if model is None:
+        model = get_embedded_model()
 
     text_to_embed = doc.get("text", "")
-    
+
     if not text_to_embed:
         return
 

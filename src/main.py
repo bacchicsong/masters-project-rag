@@ -162,10 +162,21 @@ telegram_app: Application | None = None
 async def startup():
     global telegram_app
     if RAG_CONFIG.TELEGRAM_BOT_TOKEN:
-        logger.info("Starting Telegram bot...")
-        telegram_app = await start_telegram_bot()
+        logger.info("Starting Telegram bot in background task...")
+        # Fire-and-forget: bot init (model loading) happens in the background
+        # so uvicorn starts accepting requests immediately
+        async def _init_bot():
+            global telegram_app
+            try:
+                telegram_app = await start_telegram_bot()
+            except Exception:
+                logger.exception("Failed to start Telegram bot")
+
+        asyncio.create_task(_init_bot())
     else:
         logger.warning("TELEGRAM_BOT_TOKEN not set — bot won't start.")
+
+    logger.info("FastAPI is ready to accept requests.")
 
 
 @app.on_event("shutdown")
