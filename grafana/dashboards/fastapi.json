@@ -1,0 +1,104 @@
+{
+  "dashboard": {
+    "title": "FastAPI Service Dashboard",
+    "tags": ["fastapi", "prometheus", "monitoring"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Request Rate (RPS)",
+        "type": "graph",
+        "datasource": "Prometheus",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=\"fastapi-app\"}[1m])",
+            "legendFormat": "{{method}} {{path}} {{status_group}}"
+          }
+        ],
+        "yaxes": [
+          { "format": "reqps", "label": "Requests/s" },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Latency (p50 / p95 / p99)",
+        "type": "graph",
+        "datasource": "Prometheus",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{job=\"fastapi-app\"}[1m])) by (le))",
+            "legendFormat": "p50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"fastapi-app\"}[1m])) by (le))",
+            "legendFormat": "p95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"fastapi-app\"}[1m])) by (le))",
+            "legendFormat": "p99"
+          }
+        ],
+        "yaxes": [
+          { "format": "s", "label": "Latency" },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "HTTP Error Rate (4xx + 5xx)",
+        "type": "graph",
+        "datasource": "Prometheus",
+        "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{job=\"fastapi-app\", status_group=~\"4xx|5xx\"}[1m])) / sum(rate(http_requests_total{job=\"fastapi-app\"}[1m])) * 100",
+            "legendFormat": "Error %"
+          }
+        ],
+        "yaxes": [
+          { "format": "percent", "label": "Error %" },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Requests In Progress",
+        "type": "graph",
+        "datasource": "Prometheus",
+        "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+        "targets": [
+          {
+            "expr": "http_requests_inprogress{job=\"fastapi-app\"}",
+            "legendFormat": "{{method}} {{path}}"
+          }
+        ],
+        "yaxes": [
+          { "format": "short", "label": "Count" },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Status Codes Breakdown",
+        "type": "graph",
+        "datasource": "Prometheus",
+        "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=\"fastapi-app\"}[1m])",
+            "legendFormat": "{{status_group}}"
+          }
+        ],
+        "yaxes": [
+          { "format": "reqps", "label": "Requests/s" },
+          { "format": "short" }
+        ]
+      }
+    ],
+    "schemaVersion": 27,
+    "version": 1
+  }
+}
