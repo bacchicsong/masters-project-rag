@@ -22,8 +22,7 @@ def chunk_text(text, size=100, overlap=20):
     return chunks
 
 def get_train_examples():
-    # Import locally to avoid circular import
-    from tools.fill_qdrant import load_json_files
+    from infrastructure.db.json_loader import load_json_files
     train_examples = []
     texts = load_json_files("data")
     for doc in texts:

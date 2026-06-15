@@ -1,4 +1,3 @@
-from datetime import datetime
 from pydantic import BaseModel
 from typing import List, Optional, Dict
 
@@ -15,7 +14,7 @@ class QueryRequestDTO(BaseModel):
 class HistoryItemDTO(BaseModel):
     query: str
     response: str
-    timestamp: datetime
+    timestamp: float
     duration: float
 
 
