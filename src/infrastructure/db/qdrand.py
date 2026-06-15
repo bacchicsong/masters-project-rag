@@ -63,10 +63,15 @@ def init_qdrant(logger) -> QdrantClient:
 
 def insert_document(qdrant: QdrantClient, collection_name: str, doc: dict, idx: int):
     model = get_embedded_model()
-    text_representation = " ".join([f"{k}: {v}" for k, v in doc.items()])
+
+    text_to_embed = doc.get("text", "")
+    
+    if not text_to_embed:
+        return
+
+    vector = model.encode(text_to_embed, normalize_embeddings=True).tolist()
+
     payload = doc.copy()
-    payload['text'] = text_representation 
-    vector = model.encode(text_representation, normalize_embeddings=True, ).tolist()
 
     point = PointStruct(id=idx, vector=vector, payload=payload)
     qdrant.upsert(collection_name=collection_name, points=[point])
