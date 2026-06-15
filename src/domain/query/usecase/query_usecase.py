@@ -7,6 +7,16 @@ from domain.query.delivery.dto.dto import HistoryResponseDTO, HistoryItemDTO, Fe
 from domain.query.usecase.i_query_usecase import IQueryUsecase
 from infrastructure.db.qdrand import get_embedded_model
 from infrastructure.feedback.feedback_storage import FeedbackStorage, TripletRecord
+from tools.prometheus_metrics import (
+    RAG_QUERY_DURATION,
+    RAG_QUERIES_TOTAL,
+    RAG_QDRANT_SEARCH_DURATION,
+    RAG_RERANK_DURATION,
+    RAG_GIGACHAT_CALL_DURATION,
+    RAG_GIGACHAT_ERRORS,
+    RAG_EMBEDDING_DURATION,
+    RAG_FEEDBACK_TOTAL,
+)
 
 import uuid
 import json
@@ -93,17 +103,19 @@ class QueryUsecase(IQueryUsecase):
     async def _private_method_1_encode_topic(self, query_topic):
         if not query_topic:
             raise ValueError("Query topic cannot be empty.")
-        return self.model.encode(query_topic)
+        with RAG_EMBEDDING_DURATION.time():
+            return self.model.encode(query_topic)
 
     def _private_method_2_search_qdrant(self, embedding):
         if embedding is None:
             raise TypeError("Embedding cannot be None.")
 
-        results = self.qdrant.query_points(
-            collection_name=self.collections_name,
-            query=embedding,
-            limit=QDRANT_SEARCH_LIMIT,
-        )
+        with RAG_QDRANT_SEARCH_DURATION.time():
+            results = self.qdrant.query_points(
+                collection_name=self.collections_name,
+                query=embedding,
+                limit=QDRANT_SEARCH_LIMIT,
+            )
         self.logger.info(f"Найдено кандидатов: {len(results.points)}")
         return results.points
 
@@ -116,7 +128,8 @@ class QueryUsecase(IQueryUsecase):
             text = candidate.payload.get("text", "")
             pairs.append([query, text])
 
-        scores = self.cross_encoder.predict(pairs)
+        with RAG_RERANK_DURATION.time():
+            scores = self.cross_encoder.predict(pairs)
         
         scored_candidates = list(zip(scores, candidates))
         scored_candidates.sort(key=lambda x: x[0], reverse=True)
@@ -147,11 +160,12 @@ class QueryUsecase(IQueryUsecase):
         print(prompt)
         print("=" * 30 + "\n")
 
-        token = self._get_giga_token()
-        if not token:
-            return {"answer": "Ошибка авторизации во внешней системе."}
-
-        answer_text = self._call_gigachat_api(token, prompt)
+        with RAG_GIGACHAT_CALL_DURATION.time():
+            token = self._get_giga_token()
+            if not token:
+                RAG_GIGACHAT_ERRORS.inc()
+                return {"answer": "Ошибка авторизации во внешней системе."}
+            answer_text = self._call_gigachat_api(token, prompt)
 
         return {"answer": answer_text}
 
@@ -171,9 +185,11 @@ class QueryUsecase(IQueryUsecase):
             "reranked": reranked,
         }
 
-        model_answer = await self._private_method_3_generate_answer(
-            reranked, query.query_topic
-        )
+        with RAG_QUERY_DURATION.time():
+            model_answer = await self._private_method_3_generate_answer(
+                reranked, query.query_topic
+            )
+        RAG_QUERIES_TOTAL.inc()
 
         doc_ids = list(range(len(reranked)))
 
@@ -279,5 +295,6 @@ class QueryUsecase(IQueryUsecase):
         # Clean up context
         self._query_context.pop(feedback.query_id, None)
 
+        RAG_FEEDBACK_TOTAL.labels(liked=str(feedback.liked).lower()).inc()
         self.logger.info(f"Saved {triplets_count} triplet(s) for query_id: {feedback.query_id}")
         return triplets_count
