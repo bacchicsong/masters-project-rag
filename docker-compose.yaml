@@ -21,6 +21,13 @@ services:
     working_dir: /app
     depends_on:
       - qdrant
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8088/api/v1/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     networks:
       - app_network
 
