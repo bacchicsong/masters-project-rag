@@ -1,159 +1,125 @@
-"""
-Data loading utilities for RAG experiments.
-Loads documents from JSON files, creates test queries with ground truth.
-"""
 import json
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
+
+from utils.golden_set_loader import attach_ground_truth, load_qa_from_zip
+
+USE_MOCK = False
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
 
-def load_documents(
-    data_dir: str = "data",
-    max_docs: Optional[int] = None,
-    file_pattern: str = "*.json"
-) -> List[Dict[str, Any]]:
-    """
-    Load documents from JSON files in a directory.
-
-    Args:
-        data_dir: Directory containing JSON files (relative to project root)
-        max_docs: Maximum number of documents to load (None = all)
-        file_pattern: Glob pattern for file matching
-
-    Returns:
-        List of document dicts with 'title', 'sections', 'url' keys
-    """
-    # Resolve relative to the research directory or given dir
-    project_root = Path(__file__).resolve().parent.parent.parent.parent  # goes to project root
-    json_dir = project_root / data_dir if not Path(data_dir).is_absolute() else Path(data_dir)
-
-    all_docs: List[Dict[str, Any]] = []
-
+def load_documents(data_dir="data", max_docs=None, file_pattern="*.json"):
+    json_dir = Path(data_dir) if Path(data_dir).is_absolute() else PROJECT_ROOT / data_dir
     if not json_dir.exists():
-        print(f"[WARN] Data directory not found: {json_dir}")
-        return all_docs
+        print(f"[WARN] data dir not found: {json_dir}")
+        return []
 
-    for file_path in sorted(json_dir.glob(file_pattern)):
+    docs = []
+    for path in sorted(json_dir.glob(file_pattern)):
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-
-            if isinstance(data, dict):
-                if "sections" in data:
-                    all_docs.append(data)
-                else:
-                    # Treat as a single document
-                    all_docs.append(data)
-            elif isinstance(data, list):
-                for item in data:
-                    if isinstance(item, dict) and "sections" in item:
-                        all_docs.append(item)
-                    elif isinstance(item, dict):
-                        all_docs.append(item)
-
-            if max_docs and len(all_docs) >= max_docs:
-                all_docs = all_docs[:max_docs]
-                break
-
+            data = json.load(path.open(encoding="utf-8"))
         except Exception as e:
-            print(f"[WARN] Error loading {file_path.name}: {e}")
+            print(f"[WARN] {path.name}: {e}")
+            continue
 
-    print(f"[FILE] Loaded {len(all_docs)} documents from {json_dir}")
-    return all_docs
+        if isinstance(data, list):
+            docs.extend(item for item in data if isinstance(item, dict))
+        elif isinstance(data, dict):
+            docs.append(data)
 
+        if max_docs and len(docs) >= max_docs:
+            docs = docs[:max_docs]
+            break
 
-def load_test_queries(
-    use_mock: bool = True,
-    num_queries: Optional[int] = None
-) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-    """
-    Load or generate test queries with ground truth document associations.
+    for i, doc in enumerate(docs):
+        doc.setdefault("id", f"doc_{i}")
 
-    Args:
-        use_mock: If True, use synthetic mock data. If False, attempt to load real test data.
-        num_queries: Limit number of queries (None = all)
-
-    Returns:
-        Tuple of (documents, test_queries)
-        - documents: list of document dicts
-        - test_queries: list of dicts with 'query', 'query_id', 'relevant_doc_ids' keys
-    """
-    if use_mock:
-        return _load_mock_data(num_queries)
-    else:
-        return _load_real_data(num_queries)
+    print(f"[FILE] loaded {len(docs)} documents from {json_dir}")
+    return docs
 
 
-def _load_mock_data(num_queries: Optional[int] = None) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-    """Generate synthetic documents and test queries for controlled evaluation."""
+def load_golden_eval_set(num_queries=None, zip_path=None, use_mock=None):
+    if use_mock if use_mock is not None else USE_MOCK:
+        docs, queries = _mock_data(num_queries)
+        stats = {
+            "total_qa": len(queries),
+            "matched_queries": len(queries),
+            "unmatched_queries": 0,
+            "used_queries": len(queries),
+            "unmatched_titles": [],
+        }
+        return docs, queries, stats
+
+    docs = load_documents(file_pattern="tbank_articles_clean.json")
+    qa = load_qa_from_zip(Path(zip_path) if zip_path else None)
+    queries, stats = attach_ground_truth(qa, docs)
+
+    if num_queries:
+        queries = queries[:num_queries]
+    stats["used_queries"] = len(queries)
+
+    print(
+        f"[GOLDEN] matched {stats['matched_queries']}/{stats['total_qa']}, "
+        f"eval on {stats['used_queries']}"
+    )
+    if stats["unmatched_queries"]:
+        print(f"[GOLDEN] unmatched: {stats['unmatched_queries']}")
+
+    return docs, queries, stats
+
+
+def _mock_data(num_queries=None):
     docs = [
-        {
-            "id": "doc_1",
-            "title": "Брокерский счет",
-            "url": "docs/broker",
-            "sections": [
-                {"heading": "Что такое брокерский счет", "content": ["Брокерский счет позволяет торговать акциями и валютой самостоятельно.", "Для открытия счета нужен паспорт."]},
-            ]
-        },
-        {
-            "id": "doc_2",
-            "title": "Индивидуальный Инвестиционный Счет (ИИС)",
-            "url": "docs/iis",
-            "sections": [
-                {"heading": "Преимущества ИИС", "content": ["ИИС дает право на налоговый вычет 13% от взносов (тип А).", "Деньги нельзя снимать 3 года без потери льгот."]},
-            ]
-        },
-        {
-            "id": "doc_3",
-            "title": "Налогообложение инвестиций",
-            "url": "docs/taxes",
-            "sections": [
-                {"heading": "Налог на доход", "content": ["Налог на доход от инвестиций составляет 13% для резидентов.", "Брокер выступает налоговым агентом и удерживает налог автоматически."]},
-            ]
-        },
-        {
-            "id": "doc_4",
-            "title": "Дивиденды по акциям",
-            "url": "docs/dividends",
-            "sections": [
-                {"heading": "Дивидендная доходность", "content": ["Дивиденды — это часть прибыли компании, распределяемая между акционерами.", "Налог на дивиденды удерживается у источника выплаты."]},
-            ]
-        },
-        {
-            "id": "doc_5",
-            "title": "ETF и БПИФ",
-            "url": "docs/etf",
-            "sections": [
-                {"heading": "Что такое ETF", "content": ["ETF (Exchange Traded Fund) — биржевой инвестиционный фонд.", "БПИФ — российский аналог ETF."]},
-            ]
-        },
-        {
-            "id": "doc_6",
-            "title": "ОФЗ (Облигации Федерального Займа)",
-            "url": "docs/ofz",
-            "sections": [
-                {"heading": "Государственные облигации", "content": ["ОФЗ — долговые ценные бумаги, выпускаемые Министерством финансов РФ.", "Считаются одним из самых надежных инструментов."]},
-            ]
-        },
-        {
-            "id": "doc_7",
-            "title": "Акции и их виды",
-            "url": "docs/stocks",
-            "sections": [
-                {"heading": "Типы акций", "content": ["Обыкновенные акции дают право голоса на собрании акционеров.", "Привилегированные акции гарантируют фиксированный дивиденд."]},
-            ]
-        },
-        {
-            "id": "doc_8",
-            "title": "ПИФ (Паевой Инвестиционный Фонд)",
-            "url": "docs/pif",
-            "sections": [
-                {"heading": "Как работает ПИФ", "content": ["ПИФ — это форма коллективного инвестирования.", "Управляющая компания инвестирует средства пайщиков в различные активы."]},
-            ]
-        },
+        {"id": "doc_1", "title": "Брокерский счет", "sections": [
+            {"heading": "Что такое брокерский счет", "content": [
+                "Брокерский счет позволяет торговать акциями и валютой самостоятельно.",
+                "Для открытия счета нужен паспорт.",
+            ]},
+        ]},
+        {"id": "doc_2", "title": "Индивидуальный Инвестиционный Счет (ИИС)", "sections": [
+            {"heading": "Преимущества ИИС", "content": [
+                "ИИС дает право на налоговый вычет 13% от взносов (тип А).",
+                "Деньги нельзя снимать 3 года без потери льгот.",
+            ]},
+        ]},
+        {"id": "doc_3", "title": "Налогообложение инвестиций", "sections": [
+            {"heading": "Налог на доход", "content": [
+                "Налог на доход от инвестиций составляет 13% для резидентов.",
+                "Брокер выступает налоговым агентом и удерживает налог автоматически.",
+            ]},
+        ]},
+        {"id": "doc_4", "title": "Дивиденды по акциям", "sections": [
+            {"heading": "Дивидендная доходность", "content": [
+                "Дивиденды - часть прибыли компании, распределяемая между акционерами.",
+                "Налог на дивиденды удерживается у источника выплаты.",
+            ]},
+        ]},
+        {"id": "doc_5", "title": "ETF и БПИФ", "sections": [
+            {"heading": "Что такое ETF", "content": [
+                "ETF - биржевой инвестиционный фонд.",
+                "БПИФ - российский аналог ETF.",
+            ]},
+        ]},
+        {"id": "doc_6", "title": "ОФЗ (Облигации Федерального Займа)", "sections": [
+            {"heading": "Государственные облигации", "content": [
+                "ОФЗ - долговые бумаги Минфина РФ.",
+                "Считаются одним из самых надежных инструментов.",
+            ]},
+        ]},
+        {"id": "doc_7", "title": "Акции и их виды", "sections": [
+            {"heading": "Типы акций", "content": [
+                "Обыкновенные акции дают право голоса на собрании акционеров.",
+                "Привилегированные акции гарантируют фиксированный дивиденд.",
+            ]},
+        ]},
+        {"id": "doc_8", "title": "ПИФ (Паевой Инвестиционный Фонд)", "sections": [
+            {"heading": "Как работает ПИФ", "content": [
+                "ПИФ - форма коллективного инвестирования.",
+                "УК инвестирует средства пайщиков в различные активы.",
+            ]},
+        ]},
     ]
 
-    test_queries = [
+    queries = [
         {"query_id": "q1", "query": "Как открыть брокерский счет?", "relevant_doc_ids": ["doc_1"]},
         {"query_id": "q2", "query": "Что такое ИИС и какие налоговые льготы?", "relevant_doc_ids": ["doc_2"]},
         {"query_id": "q3", "query": "Как облагается налогом доход от инвестиций?", "relevant_doc_ids": ["doc_3", "doc_4"]},
@@ -165,30 +131,8 @@ def _load_mock_data(num_queries: Optional[int] = None) -> Tuple[List[Dict[str, A
         {"query_id": "q9", "query": "Что выгоднее: ИИС или брокерский счет?", "relevant_doc_ids": ["doc_1", "doc_2"]},
         {"query_id": "q10", "query": "Как получить дивиденды по акциям?", "relevant_doc_ids": ["doc_4", "doc_7"]},
     ]
-
     if num_queries:
-        test_queries = test_queries[:num_queries]
+        queries = queries[:num_queries]
 
-    print(f"[LIST] Generated {len(test_queries)} mock test queries with {len(docs)} documents")
-    return docs, test_queries
-
-
-def _load_real_data(num_queries: Optional[int] = None) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-    """Attempt to load real data from the project's data directory."""
-    docs = load_documents()
-
-    # For real data, we'll create a generic test query set
-    # (In production, this would come from a labeled dataset)
-    test_queries = [
-        {"query_id": "q1", "query": "Что такое акция?", "relevant_doc_ids": []},
-        {"query_id": "q2", "query": "Как продать акцию?", "relevant_doc_ids": []},
-        {"query_id": "q3", "query": "Что такое ПИФ?", "relevant_doc_ids": []},
-        {"query_id": "q4", "query": "Как работает брокерский счет?", "relevant_doc_ids": []},
-        {"query_id": "q5", "query": "Что такое облигации?", "relevant_doc_ids": []},
-    ]
-
-    if num_queries:
-        test_queries = test_queries[:num_queries]
-
-    print(f"[LIST] Loaded {len(docs)} real documents, {len(test_queries)} test queries")
-    return docs, test_queries
+    print(f"[LIST] mock: {len(queries)} queries, {len(docs)} docs")
+    return docs, queries
