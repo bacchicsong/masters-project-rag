@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     QDRANT_PORT: int = 6333
     QDRANT_COLLECTION_NAME: str = "definitions"
     TELEGRAM_BOT_TOKEN: str = ""
+    ENABLE_TELEGRAM_BOT: bool = False
     INTERNAL_API_TOKEN: str = "local-dev-token"
     MINIO_ENDPOINT: str = "minio:9000"
     MINIO_ACCESS_KEY: str = "minioadmin"

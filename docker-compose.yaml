@@ -14,6 +14,7 @@ services:
       - QDRANT_COLLECTION_NAME=definitions
       - API_ACESS_TOKEN=${GIGACHAT_AUTH_KEY}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - ENABLE_TELEGRAM_BOT=${ENABLE_TELEGRAM_BOT:-false}
       - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:-local-dev-token}
       - MINIO_ENDPOINT=minio:9000
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
@@ -69,6 +70,8 @@ services:
       - qdrant
     env_file:
       - .env
+    profiles:
+      - manual
     networks:
       - app_network
 
@@ -170,7 +173,8 @@ services:
         condition: service_completed_successfully
     environment: *airflow-common-env
     volumes: *airflow-common-volumes
-    command: webserver
+    command: >
+      bash -c "airflow webserver"
     ports:
       - "8080:8080"
     healthcheck:
@@ -196,7 +200,8 @@ services:
         condition: service_completed_successfully
     environment: *airflow-common-env
     volumes: *airflow-common-volumes
-    command: scheduler
+    command: >
+      bash -c "airflow scheduler"
     restart: on-failure
     networks:
       - app_network
