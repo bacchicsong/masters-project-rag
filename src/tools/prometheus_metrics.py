@@ -64,3 +64,29 @@ RAG_FEEDBACK_TOTAL = Counter(
     "Number of feedback submissions",
     labelnames=["liked"],
 )
+
+# -- Data ingestion ----------------------------------------------------
+
+RAG_MINIO_OBJECTS_INGESTED_TOTAL = Counter(
+    "rag_minio_objects_ingested_total",
+    "Number of MinIO JSON objects processed by the RAG ingestion job",
+)
+
+RAG_DOCUMENTS_UPSERTED_TOTAL = Counter(
+    "rag_documents_upserted_total",
+    "Number of document chunks upserted into Qdrant",
+)
+
+RAG_INGESTION_DURATION = Histogram(
+    "rag_ingestion_duration_seconds",
+    "Duration of MinIO-to-Qdrant ingestion runs",
+    buckets=(1, 5, 10, 30, 60, 120, 300, 600, 1200, 3600),
+)
+
+# -- Fine-tuning -------------------------------------------------------
+
+RAG_FINE_TUNE_RUNS_TOTAL = Counter(
+    "rag_fine_tune_runs_total",
+    "Number of feedback fine-tuning runs",
+    labelnames=["status"],
+)

@@ -14,8 +14,16 @@ services:
       - QDRANT_COLLECTION_NAME=definitions
       - API_ACESS_TOKEN=${GIGACHAT_AUTH_KEY}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:-local-dev-token}
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_DATA_BUCKET=${MINIO_DATA_BUCKET:-rag-data}
+      - MINIO_DATA_PREFIX=${MINIO_DATA_PREFIX:-parsed/}
+      - USE_FINE_TUNED_MODEL=${USE_FINE_TUNED_MODEL:-false}
     volumes:
       - ./data:/app/data
+      - models_data:/models
     env_file:
       - .env
     working_dir: /app
@@ -89,8 +97,107 @@ services:
       sleep 5;
       mc alias set myminio http://minio:9000 minioadmin minioadmin;
       mc mb myminio/mlflow-artifacts --ignore-existing;
+      mc mb myminio/rag-data --ignore-existing;
       echo 'Bucket mlflow-artifacts created successfully';
+      echo 'Bucket rag-data created successfully';
       "
+    networks:
+      - app_network
+
+  airflow-postgres:
+    image: postgres:15
+    container_name: airflow-postgres
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - airflow_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app_network
+
+  airflow-init:
+    build:
+      context: airflow
+      dockerfile: Dockerfile
+    container_name: airflow-init
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+    environment: &airflow-common-env
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_WEBSERVER_SECRET_KEY:-local_airflow_secret}
+      AIRFLOW__API__AUTH_BACKENDS: airflow.api.auth.backend.basic_auth
+      FASTAPI_INTERNAL_URL: http://app:8088/api/v1
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-local-dev-token}
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_DATA_BUCKET: ${MINIO_DATA_BUCKET:-rag-data}
+      MINIO_DATA_PREFIX: ${MINIO_DATA_PREFIX:-parsed/}
+      PARSER_OUTPUT_DIR: /opt/airflow/tbank_knowledge
+      NORMALIZED_OUTPUT_DIR: /opt/airflow/normalized
+    volumes: &airflow-common-volumes
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/funcs:/opt/airflow/funcs
+      - airflow_logs:/opt/airflow/logs
+      - airflow_tbank_knowledge:/opt/airflow/tbank_knowledge
+      - airflow_normalized:/opt/airflow/normalized
+    command: >
+      bash -c "airflow db migrate &&
+      airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin || true"
+    networks:
+      - app_network
+
+  airflow-webserver:
+    build:
+      context: airflow
+      dockerfile: Dockerfile
+    container_name: airflow-webserver
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+      app:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    environment: *airflow-common-env
+    volumes: *airflow-common-volumes
+    command: webserver
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    networks:
+      - app_network
+
+  airflow-scheduler:
+    build:
+      context: airflow
+      dockerfile: Dockerfile
+    container_name: airflow-scheduler
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+      app:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    environment: *airflow-common-env
+    volumes: *airflow-common-volumes
+    command: scheduler
+    restart: on-failure
     networks:
       - app_network
 
@@ -152,3 +259,8 @@ volumes:
   qdrant_storage:
   minio_data:
   grafana_data:
+  airflow_postgres_data:
+  airflow_logs:
+  airflow_tbank_knowledge:
+  airflow_normalized:
+  models_data:

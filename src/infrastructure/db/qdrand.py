@@ -12,7 +12,7 @@ from config.config import RAG_CONFIG
 QDRANT_TIMEOUT = 180
 EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 FINE_TUNED_MODEL_PATH = str(Path(__file__).parent.parent.parent / "models" / "fine_tuned_bi_encoder")
-USE_FINE_TUNED = False
+USE_FINE_TUNED = os.getenv("USE_FINE_TUNED_MODEL", "false").lower() == "true"
 
 # ── Cached embedding model (singleton) ──────────────────────────────
 _embedded_model: "SentenceTransformer | None" = None

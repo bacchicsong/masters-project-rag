@@ -1,112 +1,136 @@
 from datetime import datetime, timedelta
+import json
+import os
+from pathlib import Path
+import sys
+import urllib.request
+
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-import sys
-from pathlib import Path
-import smtplib
-from email.message import EmailMessage
+from minio import Minio
 
-sys.path.append('/opt/airflow/funcs')
+sys.path.append("/opt/airflow/funcs")
 
-from daily_parsing import main as run_parser, clean_json_file, send_email
+from daily_parsing import main as run_parser, save_normalized_chunks
 
-def empty_task():
-    for i in range(6):
-        print(i)
 
-def run_parsing_task(**context):
-    print("Запуск парсинга")
-    result = run_parser()
-    print("Окончание парсинга")
-    return {"status": "success"}
+RAW_DIR = Path(os.getenv("PARSER_OUTPUT_DIR", "/opt/airflow/tbank_knowledge"))
+NORMALIZED_DIR = Path(os.getenv("NORMALIZED_OUTPUT_DIR", "/opt/airflow/normalized"))
+FASTAPI_INTERNAL_URL = os.getenv("FASTAPI_INTERNAL_URL", "http://app:8088/api/v1")
+INTERNAL_API_TOKEN = os.getenv("INTERNAL_API_TOKEN", "local-dev-token")
+MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
+MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+MINIO_DATA_BUCKET = os.getenv("MINIO_DATA_BUCKET", "rag-data")
+MINIO_DATA_PREFIX = os.getenv("MINIO_DATA_PREFIX", "parsed/")
 
-def clean_data_task():
-    print("Запуск очистки")
 
-    input_folder = Path("/opt/airflow/tbank_knowledge")
-    output_folder = Path("/opt/airflow/tbank_knowledge_clean")
-    output_folder.mkdir(exist_ok=True, parents=True)
-
-    json_files = list(input_folder.glob("*.json"))
-    if not json_files:
-        print(f"файлы не найдены")
-        return
-
-    print(f"Найдено файлов: {len(json_files)}")
-
-    for i, input_file in enumerate(json_files, 1):
-        try:
-            output_file = output_folder / input_file.name
-            clean_json_file(input_file, output_file)
-            print(f"[{i}/{len(json_files)}] Очищен: {input_file.name}")
-        except Exception as e:
-            print(f"[{i}/{len(json_files)}] Ошибка: {e}")
-def send_success_email(**context):
-    send_email(
-        "Airflow: Парсинг выполнен успешно",
-        f"""
-            DAG: daily_data_update
-            Статус: УСПЕХ
-            Дата: {datetime.now()}
-            Задачи: парсинг и очистка выполнены успешно
-        """
+def _minio_client() -> Minio:
+    return Minio(
+        MINIO_ENDPOINT,
+        access_key=MINIO_ACCESS_KEY,
+        secret_key=MINIO_SECRET_KEY,
+        secure=False,
     )
 
-def send_failure_email(**context):
-    send_email(
-        "Airflow: Ошибка при выполнении парсинга",
-        f"""
-            DAG: daily_data_update
-            Статус: ОШИБКА
-            Дата: {datetime.now()}
-            Проверьте логи Airflow для деталей
-        """
+
+def _post_internal(path: str) -> dict:
+    req = urllib.request.Request(
+        f"{FASTAPI_INTERNAL_URL}{path}",
+        method="POST",
+        headers={"X-Internal-Token": INTERNAL_API_TOKEN},
     )
+    with urllib.request.urlopen(req, timeout=3600) as response:
+        body = response.read().decode("utf-8")
+    return json.loads(body) if body else {}
+
+
+def parse_and_normalize_task(**context) -> dict:
+    articles = run_parser()
+    output_file = NORMALIZED_DIR / f"tbank_articles_{context['ds_nodash']}.json"
+    result = save_normalized_chunks(articles, output_file)
+    print(json.dumps(result, ensure_ascii=False))
+    return result
+
+
+def upload_to_minio_task(**context) -> dict:
+    parse_result = context["ti"].xcom_pull(task_ids="parse_and_normalize")
+    output_file = Path(parse_result["output_file"])
+    object_name = f"{MINIO_DATA_PREFIX}{output_file.name}"
+
+    client = _minio_client()
+    if not client.bucket_exists(MINIO_DATA_BUCKET):
+        client.make_bucket(MINIO_DATA_BUCKET)
+
+    client.fput_object(
+        MINIO_DATA_BUCKET,
+        object_name,
+        str(output_file),
+        content_type="application/json",
+    )
+
+    result = {
+        "bucket": MINIO_DATA_BUCKET,
+        "object_name": object_name,
+        "chunks": parse_result["chunks"],
+        "articles": parse_result["articles"],
+    }
+    print(json.dumps(result, ensure_ascii=False))
+    return result
+
+
+def ingest_qdrant_task() -> dict:
+    result = _post_internal("/admin/ingest/minio")
+    print(json.dumps(result, ensure_ascii=False))
+    return result
+
+
+def fine_tune_feedback_task() -> dict:
+    result = _post_internal("/admin/fine-tune-feedback")
+    print(json.dumps(result, ensure_ascii=False))
+    return result
 
 
 default_args = {
-    'owner': 'clprm',
-    'depends_on_past': False,
-    'start_date': datetime(2026, 6, 9),
-    'retries': 1,
-    'retry_delay': timedelta(minutes=5),
+    "owner": "clprm",
+    "depends_on_past": False,
+    "start_date": datetime(2026, 6, 9),
+    "retries": 1,
+    "retry_delay": timedelta(minutes=5),
 }
 
+
 with DAG(
-        'daily_data_update',
-        default_args=default_args,
-        description='Ежедневный парсинг',
-        schedule='0 0 * * *',
-        start_date=datetime(2026, 6, 9),
-        catchup=False,
-        max_active_runs=1,
-        tags=['tbank'],
+    "daily_data_update",
+    default_args=default_args,
+    description="Parse T-Bank articles, upload normalized chunks to MinIO, refresh Qdrant, fine-tune from feedback",
+    schedule="0 0 * * *",
+    catchup=False,
+    max_active_runs=1,
+    tags=["tbank", "minio", "qdrant", "feedback"],
 ) as dag:
-    parsing_task = PythonOperator(
-        task_id='run_tbank_parser',
-        # python_callable=run_parsing_task,
-        python_callable=empty_task,
+    parse_and_normalize = PythonOperator(
+        task_id="parse_and_normalize",
+        python_callable=parse_and_normalize_task,
         execution_timeout=timedelta(hours=2),
     )
 
-    cleaning_task = PythonOperator(
-        task_id='clean_data',
-        # python_callable=clean_data_task,
-        python_callable=empty_task,
-        execution_timeout=timedelta(hours=1),
+    upload_to_minio = PythonOperator(
+        task_id="upload_to_minio",
+        python_callable=upload_to_minio_task,
+        execution_timeout=timedelta(minutes=30),
     )
 
-    success_email = PythonOperator(
-        task_id='send_success_email',
-        python_callable=send_success_email,
-        trigger_rule='all_success',
+    ingest_qdrant = PythonOperator(
+        task_id="ingest_qdrant",
+        python_callable=ingest_qdrant_task,
+        execution_timeout=timedelta(hours=2),
     )
 
-    failure_email = PythonOperator(
-        task_id='send_failure_email',
-        python_callable=send_failure_email,
-        trigger_rule='one_failed',
+    fine_tune_feedback = PythonOperator(
+        task_id="fine_tune_feedback",
+        python_callable=fine_tune_feedback_task,
+        execution_timeout=timedelta(hours=4),
     )
 
-    parsing_task >> cleaning_task
-    cleaning_task >> [success_email, failure_email]
+    parse_and_normalize >> upload_to_minio >> ingest_qdrant >> fine_tune_feedback

@@ -4,6 +4,8 @@ from typing import List, Optional, Dict
 
 class QueryResponseDTO(BaseModel):
     text: str
+    query_id: str
+    retrieved_doc_ids: List[int] = []
 
 
 class QueryRequestDTO(BaseModel):

@@ -19,6 +19,13 @@ class Settings(BaseSettings):
     QDRANT_PORT: int = 6333
     QDRANT_COLLECTION_NAME: str = "definitions"
     TELEGRAM_BOT_TOKEN: str = ""
+    INTERNAL_API_TOKEN: str = "local-dev-token"
+    MINIO_ENDPOINT: str = "minio:9000"
+    MINIO_ACCESS_KEY: str = "minioadmin"
+    MINIO_SECRET_KEY: str = "minioadmin"
+    MINIO_SECURE: bool = False
+    MINIO_DATA_BUCKET: str = "rag-data"
+    MINIO_DATA_PREFIX: str = "parsed/"
     MODEL_NAME: str = "sberbank-ai/sbert_large_nlu_rus"
     LLM_MODEL: str | None = "cointegrated/rut5-base-absum"
 

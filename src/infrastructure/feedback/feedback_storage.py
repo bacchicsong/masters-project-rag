@@ -6,6 +6,41 @@ from datetime import datetime
 
 FEEDBACK_DIR = Path(__file__).parent.parent.parent.parent / "data" / "feedback"
 FEEDBACK_FILE = FEEDBACK_DIR / "feedback.jsonl"
+FEEDBACK_EVENTS_FILE = FEEDBACK_DIR / "feedback_events.jsonl"
+
+
+class FeedbackRecord:
+    def __init__(
+        self,
+        query_id: str,
+        query: str,
+        answer: str,
+        liked: bool,
+        timestamp: str,
+        retrieved_docs: Optional[List[Dict]] = None,
+        relevant_doc_ids: Optional[List[int]] = None,
+        triplets_created: int = 0,
+    ):
+        self.query_id = query_id
+        self.query = query
+        self.answer = answer
+        self.liked = liked
+        self.timestamp = timestamp
+        self.retrieved_docs = retrieved_docs or []
+        self.relevant_doc_ids = relevant_doc_ids or []
+        self.triplets_created = triplets_created
+
+    def to_dict(self) -> dict:
+        return {
+            "query_id": self.query_id,
+            "query": self.query,
+            "answer": self.answer,
+            "liked": self.liked,
+            "timestamp": self.timestamp,
+            "retrieved_docs": self.retrieved_docs,
+            "relevant_doc_ids": self.relevant_doc_ids,
+            "triplets_created": self.triplets_created,
+        }
 
 
 class TripletRecord:
@@ -50,6 +85,10 @@ class FeedbackStorage:
     def save_triplet(self, triplet: TripletRecord):
         with open(FEEDBACK_FILE, "a", encoding="utf-8") as f:
             f.write(json.dumps(triplet.to_dict(), ensure_ascii=False) + "\n")
+
+    def save_feedback_event(self, feedback: FeedbackRecord):
+        with open(FEEDBACK_EVENTS_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(feedback.to_dict(), ensure_ascii=False) + "\n")
 
     def load_all(self, since: Optional[str] = None) -> List[TripletRecord]:
         if not FEEDBACK_FILE.exists():

@@ -14,6 +14,7 @@ from email.message import EmailMessage
 from dotenv import load_dotenv
 import re
 import os
+from datetime import datetime, timezone
 
 
 load_dotenv('/opt/airflow/.env')
@@ -66,7 +67,7 @@ def send_email(subject, body):
 
 class ParserConfig:
     BASE_URL = "https://www.tbank.ru/invest/help/educate/how-it-works/"
-    OUTPUT_DIR = "tbank_knowledge"
+    OUTPUT_DIR = os.getenv("PARSER_OUTPUT_DIR", "/opt/airflow/tbank_knowledge")
 
     MAX_RECURSION_DEPTH = 4
 
@@ -532,6 +533,71 @@ def main():
     print(f"{Fore.GREEN}{'=' * 80}{Style.RESET_ALL}\n")
     print(f"{Fore.CYAN}📁 Директория: {parser.output_dir.absolute()}")
     print(f"{Fore.CYAN}📚 Уникальных статей: {len(articles)}\n")
+    return articles
+
+
+def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 120) -> list[str]:
+    text = re.sub(r"\s+", " ", text).strip()
+    if not text:
+        return []
+
+    chunks = []
+    start = 0
+    while start < len(text):
+        end = min(start + chunk_size, len(text))
+        chunks.append(text[start:end].strip())
+        if end == len(text):
+            break
+        start = max(end - overlap, start + 1)
+    return chunks
+
+
+def normalize_articles_to_chunks(
+    articles: list[dict],
+    source_file: str = "tbank_parser",
+    chunk_size: int = 1000,
+    overlap: int = 120,
+) -> list[dict]:
+    normalized = []
+    generated_at = datetime.now(timezone.utc).isoformat()
+
+    for article in articles:
+        title = article.get("title") or "Untitled"
+        content = article.get("content") or ""
+        text = f"{title}\n\n{content}".strip()
+        for chunk in chunk_text(text, chunk_size=chunk_size, overlap=overlap):
+            normalized.append(
+                {
+                    "chunk_id": len(normalized) + 1,
+                    "text": chunk,
+                    "meta": {
+                        "character_count": len(chunk),
+                        "original_character_count": len(text),
+                        "source_file": source_file,
+                        "source_url": article.get("url"),
+                        "title": title,
+                        "translated_from_english": False,
+                        "generated_at": generated_at,
+                    },
+                }
+            )
+
+    return normalized
+
+
+def save_normalized_chunks(articles: list[dict], output_file: str | Path) -> dict:
+    output_path = Path(output_file)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    chunks = normalize_articles_to_chunks(articles, source_file=output_path.name)
+
+    with output_path.open("w", encoding="utf-8") as f:
+        json.dump(chunks, f, ensure_ascii=False, indent=2)
+
+    return {
+        "output_file": str(output_path),
+        "articles": len(articles),
+        "chunks": len(chunks),
+    }
 
 
 if __name__ == "__main__":

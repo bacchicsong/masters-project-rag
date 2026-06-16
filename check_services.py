@@ -1,138 +1,169 @@
-import urllib.request, urllib.parse, json, subprocess, time, sys
+import json
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.request
 
-SEPARATOR = "=" * 60
 
-print(SEPARATOR)
-print("  Service Health Check")
-print(SEPARATOR)
-print()
+SEPARATOR = "=" * 72
 
-# ── Configuration ───────────────────────────────────────────────────
-FASTAPI_URL = "http://localhost:8088/api/v1/health"
-FASTAPI_TIMEOUT = 5
-FASTAPI_MAX_RETRIES = 3
-FASTAPI_RETRY_DELAY = 10  # seconds between retries
 
-# ── FastAPI health (with retries) ──────────────────────────────────
-print(f"[1/6] FastAPI ({FASTAPI_URL})")
-fastapi_ok = False
-for attempt in range(1, FASTAPI_MAX_RETRIES + 1):
+def print_header(title: str):
+    print(SEPARATOR)
+    print(f"  {title}")
+    print(SEPARATOR)
+
+
+def fetch(url: str, timeout: int = 5):
     try:
-        resp = urllib.request.urlopen(FASTAPI_URL, timeout=FASTAPI_TIMEOUT)
-        body = resp.read().decode()
-        print(f"  ✅ OK: {resp.status} | Response: {body}")
-        fastapi_ok = True
-        break
+        response = urllib.request.urlopen(url, timeout=timeout)
+        return response.status, response.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        return e.code, body
+
+
+def check_http(name: str, url: str, expected=(200,), timeout: int = 5) -> bool:
+    print(f"- {name}: {url}")
+    try:
+        status, body = fetch(url, timeout=timeout)
+        if status in expected:
+            preview = body[:180].replace("\n", " ")
+            print(f"  OK {status} {preview}")
+            return True
+        print(f"  FAIL unexpected status {status}: {body[:300]}")
     except Exception as e:
-        if attempt < FASTAPI_MAX_RETRIES:
-            print(f"  ⏳ Attempt {attempt}/{FASTAPI_MAX_RETRIES} failed — retrying in {FASTAPI_RETRY_DELAY}s...")
-            time.sleep(FASTAPI_RETRY_DELAY)
-        else:
-            print(f"  ❌ FAIL (after {FASTAPI_MAX_RETRIES} attempts): {e}")
-print()
+        print(f"  FAIL {e}")
+    return False
 
-# ── Qdrant ──────────────────────────────────────────────────────────
-print("[2/6] Qdrant (http://localhost:6333/healthz)")
-try:
-    resp = urllib.request.urlopen("http://localhost:6333/healthz", timeout=5)
-    print(f"  ✅ OK: {resp.status}")
-except Exception as e:
-    print(f"  ❌ FAIL: {e}")
 
-# ── Qdrant collection size ──────────────────────────────────────────
-print("[2.1] Qdrant Collection 'definitions'")
-try:
-    req = urllib.request.Request("http://localhost:6333/collections/definitions")
-    resp = urllib.request.urlopen(req, timeout=5)
-    data = json.loads(resp.read().decode())
-    result = data.get("result", {})
-    points_count = result.get("points_count", "N/A")
-    vectors_size = result.get("config", {}).get("params", {}).get("vectors", {}).get("size", "N/A")
-    status = result.get("status", "N/A")
-    print(f"  ✅ Points: {points_count} | Vector size: {vectors_size} | Status: {status}")
-except Exception as e:
-    print(f"  ⚠️  Could not read collection info: {e}")
-print()
+def check_fastapi() -> bool:
+    ok = False
+    for attempt in range(1, 4):
+        try:
+            status, body = fetch("http://localhost:8088/api/v1/health", timeout=5)
+            if status == 200:
+                print(f"- FastAPI health: OK {body}")
+                ok = True
+                break
+        except Exception as e:
+            if attempt == 3:
+                print(f"- FastAPI health: FAIL {e}")
+            else:
+                print(f"- FastAPI health: attempt {attempt}/3 failed, retrying...")
+                time.sleep(10)
+    return ok
 
-# ── MinIO ──────────────────────────────────────────────────────────
-print("[3/6] MinIO (http://localhost:9001)")
-try:
-    resp = urllib.request.urlopen("http://localhost:9001", timeout=5)
-    print(f"  ✅ OK: {resp.status}")
-except Exception as e:
-    print(f"  ❌ FAIL: {e}")
 
-# ── MinIO S3 API ──────────────────────────────────────────────────
-print("[3.1] MinIO S3 API (http://localhost:9000)")
-try:
-    resp = urllib.request.urlopen("http://localhost:9000", timeout=5)
-    print(f"  ✅ OK: {resp.status}")
-except Exception as e:
-    print(f"  ⚠️  FAIL: {e}")
-print()
+def check_qdrant_collection() -> bool:
+    print("- Qdrant collection definitions")
+    try:
+        status, body = fetch("http://localhost:6333/collections/definitions", timeout=5)
+        if status != 200:
+            print(f"  FAIL status {status}: {body[:300]}")
+            return False
+        data = json.loads(body)
+        result = data.get("result", {})
+        print(
+            "  OK "
+            f"points={result.get('points_count', 'N/A')} "
+            f"status={result.get('status', 'N/A')}"
+        )
+        return True
+    except Exception as e:
+        print(f"  FAIL {e}")
+        return False
 
-# ── MLflow ─────────────────────────────────────────────────────────
-print("[4/6] MLflow (http://localhost:5000)")
-try:
-    resp = urllib.request.urlopen("http://localhost:5000", timeout=5)
-    print(f"  ✅ OK: {resp.status}")
-except Exception as e:
-    print(f"  ❌ FAIL: {e}")
-print()
 
-# ── Telegram ───────────────────────────────────────────────────────
-print("[5/6] Telegram Bot (docker logs)")
-try:
-    r = subprocess.run(
-        ["docker", "logs", "fastapi_app"],
-        capture_output=True,
-        timeout=15,
-        encoding="utf-8",
-        errors="replace",
-    )
-    logs = (r.stdout or "") + (r.stderr or "")
-    if "Starting Telegram bot" in logs:
-        print(f"  ✅ RUNNING")
-    elif "Starting Telegram bot in background" in logs:
-        print(f"  ✅ RUNNING (background)")
-    elif "TELEGRAM_BOT_TOKEN not set" in logs:
-        print(f"  ⚠️  TOKEN MISSING")
-    elif "Failed to start Telegram bot" in logs:
-        print(f"  ❌ FAILED TO START")
-    else:
-        if "Uvicorn running on" in logs:
-            print(f"  ⏳ Still loading model...")
-        else:
-            print(f"  ❓ UNKNOWN — no startup message yet")
-except Exception as e:
-    print(f"  ❌ Error reading logs: {e}")
-    logs = ""
-print()
+def check_prometheus_targets() -> bool:
+    print("- Prometheus targets")
+    try:
+        status, body = fetch("http://localhost:9090/api/v1/targets", timeout=5)
+        if status != 200:
+            print(f"  FAIL status {status}: {body[:300]}")
+            return False
+        data = json.loads(body)
+        active = data.get("data", {}).get("activeTargets", [])
+        for target in active:
+            labels = target.get("labels", {})
+            print(
+                "  "
+                f"{labels.get('job', 'unknown')} "
+                f"{target.get('scrapeUrl')} "
+                f"health={target.get('health')}"
+            )
+        return any(t.get("health") == "up" for t in active)
+    except Exception as e:
+        print(f"  FAIL {e}")
+        return False
 
-# ── Docker containers status (bonus) ───────────────────────────────
-print("[6/6] Docker Container Status")
-try:
-    r = subprocess.run(
-        ["docker", "ps", "-a", "--format", "table {{.Names}}\t{{.Status}}\t{{.Ports}}"],
-        capture_output=True,
-        timeout=15,
-        encoding="utf-8",
-        errors="replace",
-    )
-    output = r.stdout or r.stderr or ""
-    for line in output.strip().split("\n"):
-        print(f"  {line}")
-except Exception as e:
-    print(f"  ❌ Error: {e}")
-print()
 
-# ── Show last 5 log lines ─────────────────────────────────────────
-print(SEPARATOR)
-print("  FastAPI Last 5 Log Lines")
-print(SEPARATOR)
-if logs:
-    lines = logs.strip().split("\n")
-    for l in lines[-5:]:
-        print(l)
-else:
-    print("  (no logs available)")
+def check_docker_ps() -> bool:
+    print("- Docker containers")
+    try:
+        result = subprocess.run(
+            ["docker", "ps", "-a", "--format", "table {{.Names}}\t{{.Status}}\t{{.Ports}}"],
+            capture_output=True,
+            timeout=15,
+            encoding="utf-8",
+            errors="replace",
+        )
+        output = result.stdout or result.stderr
+        for line in output.strip().splitlines():
+            print(f"  {line}")
+        return result.returncode == 0
+    except Exception as e:
+        print(f"  FAIL {e}")
+        return False
+
+
+def check_fastapi_logs() -> bool:
+    print("- FastAPI recent logs")
+    try:
+        result = subprocess.run(
+            ["docker", "logs", "--tail", "20", "fastapi_app"],
+            capture_output=True,
+            timeout=15,
+            encoding="utf-8",
+            errors="replace",
+        )
+        logs = (result.stdout or "") + (result.stderr or "")
+        for line in logs.strip().splitlines()[-5:]:
+            print(f"  {line}")
+        return result.returncode == 0
+    except Exception as e:
+        print(f"  FAIL {e}")
+        return False
+
+
+def main() -> int:
+    print_header("Service Health Check")
+
+    checks = [
+        ("FastAPI", check_fastapi()),
+        ("FastAPI metrics", check_http("FastAPI metrics", "http://localhost:8088/metrics")),
+        ("Qdrant health", check_http("Qdrant health", "http://localhost:6333/healthz")),
+        ("Qdrant collection", check_qdrant_collection()),
+        ("MinIO console", check_http("MinIO console", "http://localhost:9001")),
+        ("MinIO S3 API", check_http("MinIO S3 API", "http://localhost:9000", expected=(200, 403))),
+        ("Airflow health", check_http("Airflow health", "http://localhost:8080/health")),
+        ("MLflow", check_http("MLflow", "http://localhost:5000")),
+        ("Grafana", check_http("Grafana", "http://localhost:3000/api/health")),
+        ("Prometheus", check_http("Prometheus", "http://localhost:9090/-/healthy")),
+        ("Prometheus targets", check_prometheus_targets()),
+        ("Docker ps", check_docker_ps()),
+        ("FastAPI logs", check_fastapi_logs()),
+    ]
+
+    print_header("Summary")
+    failed = [name for name, ok in checks if not ok]
+    if failed:
+        print(f"FAIL: {', '.join(failed)}")
+        return 1
+    print("OK: all checks passed")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

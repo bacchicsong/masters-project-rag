@@ -67,7 +67,7 @@ def fine_tune():
     """Запускает процесс дообучения би-энкодера."""
     examples = load_triplets()
     if not examples:
-        return
+        return {"status": "skipped", "reason": "not_enough_triplets", "examples": 0}
 
     # Разделяем на train/eval (90/10)
     split = int(len(examples) * 0.9)
@@ -112,6 +112,13 @@ def fine_tune():
 
     print(f"\n✅ Модель сохранена в: {OUTPUT_PATH}")
     print("Для использования обновите EMBEDDING_MODEL_NAME в src/infrastructure/db/qdrand.py")
+    return {
+        "status": "trained",
+        "examples": len(examples),
+        "train_examples": len(train_examples),
+        "eval_examples": len(eval_examples),
+        "output_path": OUTPUT_PATH,
+    }
 
 
 if __name__ == "__main__":
