@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     ENABLE_TELEGRAM_BOT: bool = False
     USE_CROSS_ENCODER: bool = False
     PRELOAD_EMBEDDING_MODEL: bool = True
+    LOG_SUCCESSFUL_REQUESTS: bool = False
+    LOG_HEALTHCHECK_REQUESTS: bool = False
+    LOG_REQUEST_BODY: bool = False
+    DEBUG_RAG_PROMPTS: bool = False
     INTERNAL_API_TOKEN: str = "local-dev-token"
     MINIO_ENDPOINT: str = "minio:9000"
     MINIO_ACCESS_KEY: str = "minioadmin"

@@ -7,6 +7,14 @@ prometheus-fastapi-instrumentator on the same /metrics endpoint.
 
 from prometheus_client import Counter, Histogram
 
+# -- Lightweight service events ---------------------------------------
+
+APP_EVENTS_TOTAL = Counter(
+    "app_events_total",
+    "Lightweight application events intended for Grafana instead of verbose logs",
+    labelnames=["event", "status"],
+)
+
 # -- RAG query pipeline ------------------------------------------------
 
 RAG_QUERY_DURATION = Histogram(

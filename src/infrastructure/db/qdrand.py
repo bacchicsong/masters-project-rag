@@ -77,10 +77,15 @@ def get_embedded_model() -> SentenceTransformer:
                 model_name,
                 cache_folder=MODEL_CACHE_FOLDER,
             )
+            dimension = (
+                _embedded_model.get_embedding_dimension()
+                if hasattr(_embedded_model, "get_embedding_dimension")
+                else _embedded_model.get_sentence_embedding_dimension()
+            )
             _embedded_model_status.update(
                 {
                     "state": "loaded",
-                    "dimension": _embedded_model.get_sentence_embedding_dimension(),
+                    "dimension": dimension,
                     "error": None,
                 }
             )
