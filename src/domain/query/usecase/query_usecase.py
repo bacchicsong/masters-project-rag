@@ -171,10 +171,8 @@ class QueryUsecase(IQueryUsecase):
             f"ВОПРОС ПОЛЬЗОВАТЕЛЯ:\n{query_topic}"
         )
 
-        print("\n" + "=" * 30)
-        print(" [DEBUG] Generated Prompt: ")
-        print(prompt)
-        print("=" * 30 + "\n")
+        if getattr(self.config, "DEBUG_RAG_PROMPTS", False):
+            self.logger.debug("Generated RAG prompt", extra={"prompt_len": len(prompt)})
 
         with RAG_GIGACHAT_CALL_DURATION.time():
             token = self._get_giga_token()

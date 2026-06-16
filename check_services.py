@@ -187,7 +187,8 @@ def check_fastapi_logs() -> bool:
         )
         logs = (result.stdout or "") + (result.stderr or "")
         for line in logs.strip().splitlines()[-5:]:
-            print(f"  {redact_secrets(line)}")
+            line = redact_secrets(line).encode("ascii", "backslashreplace").decode("ascii")
+            print(f"  {line}")
         return result.returncode == 0
     except Exception as e:
         print(f"  FAIL {e}")

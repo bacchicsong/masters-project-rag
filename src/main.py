@@ -13,6 +13,7 @@ from config.config import RAG_CONFIG
 from domain.query.delivery.controller import router
 from infrastructure.db.qdrand import get_embedded_model
 from infrastructure.telegram_bot import start_telegram_bot, stop_telegram_bot
+from tools.prometheus_metrics import APP_EVENTS_TOTAL
 from prometheus_fastapi_instrumentator import Instrumentator
 
 # ── Structured JSON Logging Setup ──────────────────────────────────────
@@ -59,6 +60,10 @@ root_logger = logging.getLogger()
 for handler in root_logger.handlers:
     handler.setFormatter(JsonFormatter())
 
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
+
 
 # ── Request Logging Middleware ─────────────────────────────────────────
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
@@ -67,11 +72,13 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         request_id = str(uuid.uuid4())[:8]
         request.state.request_id = request_id
+        path = request.url.path
+        is_healthcheck = path in {"/metrics", "/api/v1/health", "/health"}
 
         # Parse body for logging (only if needed — avoid on large uploads)
         body = None
         content_type = request.headers.get("content-type", "")
-        if "multipart/form-data" not in content_type:
+        if RAG_CONFIG.LOG_REQUEST_BODY and "multipart/form-data" not in content_type:
             try:
                 body_bytes = await request.body()
                 if body_bytes:
@@ -89,7 +96,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 extra={
                     "request_id": request_id,
                     "method": request.method,
-                    "path": request.url.path,
+                    "path": path,
                     "query": str(request.query_params),
                     "client_ip": request.client.host if request.client else None,
                     "body": body,
@@ -121,7 +128,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         log_data = {
             "request_id": request_id,
             "method": request.method,
-            "path": request.url.path,
+            "path": path,
             "query": str(request.query_params),
             "client_ip": request.client.host if request.client else None,
             "body": body,
@@ -131,9 +138,14 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         if response_body:
             log_data["response_body"] = response_body
 
-        if response.status_code < 400:
+        should_log_success = (
+            RAG_CONFIG.LOG_SUCCESSFUL_REQUESTS
+            and (RAG_CONFIG.LOG_HEALTHCHECK_REQUESTS or not is_healthcheck)
+        )
+
+        if response.status_code < 400 and should_log_success:
             logger.info("request", extra=log_data)
-        else:
+        elif response.status_code >= 400:
             logger.warning("request", extra=log_data)
 
         return response
@@ -163,8 +175,10 @@ async def _preload_embedding_model():
     logger.info("Preloading embedding model in background...")
     try:
         await asyncio.to_thread(get_embedded_model)
+        APP_EVENTS_TOTAL.labels(event="embedding_preload", status="success").inc()
         logger.info("Embedding model preloaded.")
     except Exception:
+        APP_EVENTS_TOTAL.labels(event="embedding_preload", status="failed").inc()
         logger.exception("Embedding model preload failed.")
 
 
@@ -181,7 +195,9 @@ async def startup():
             while telegram_app is None:
                 try:
                     telegram_app = await start_telegram_bot()
+                    APP_EVENTS_TOTAL.labels(event="telegram_bot_start", status="success").inc()
                 except Exception:
+                    APP_EVENTS_TOTAL.labels(event="telegram_bot_start", status="failed").inc()
                     logger.exception(
                         "Failed to start Telegram bot; retrying",
                         extra={"retry_delay_s": retry_delay},
@@ -190,12 +206,14 @@ async def startup():
 
         asyncio.create_task(_init_bot())
     else:
+        APP_EVENTS_TOTAL.labels(event="telegram_bot_start", status="disabled").inc()
         logger.warning("Telegram bot disabled or TELEGRAM_BOT_TOKEN not set.")
 
     if RAG_CONFIG.PRELOAD_EMBEDDING_MODEL:
         asyncio.create_task(_preload_embedding_model())
 
     logger.info("FastAPI is ready to accept requests.")
+    APP_EVENTS_TOTAL.labels(event="fastapi_startup", status="success").inc()
 
 
 @app.on_event("shutdown")
