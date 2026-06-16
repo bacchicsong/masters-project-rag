@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     QDRANT_COLLECTION_NAME: str = "definitions"
     TELEGRAM_BOT_TOKEN: str = ""
     ENABLE_TELEGRAM_BOT: bool = False
+    USE_CROSS_ENCODER: bool = False
+    PRELOAD_EMBEDDING_MODEL: bool = True
     INTERNAL_API_TOKEN: str = "local-dev-token"
     MINIO_ENDPOINT: str = "minio:9000"
     MINIO_ACCESS_KEY: str = "minioadmin"
@@ -27,7 +29,8 @@ class Settings(BaseSettings):
     MINIO_SECURE: bool = False
     MINIO_DATA_BUCKET: str = "rag-data"
     MINIO_DATA_PREFIX: str = "parsed/"
-    MODEL_NAME: str = "sberbank-ai/sbert_large_nlu_rus"
+    EMBEDDING_MODEL_NAME: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    MODEL_NAME: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     LLM_MODEL: str | None = "cointegrated/rut5-base-absum"
 
     class Config:

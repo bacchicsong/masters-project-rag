@@ -11,6 +11,7 @@ from telegram.ext import Application
 
 from config.config import RAG_CONFIG
 from domain.query.delivery.controller import router
+from infrastructure.db.qdrand import get_embedded_model
 from infrastructure.telegram_bot import start_telegram_bot, stop_telegram_bot
 from prometheus_fastapi_instrumentator import Instrumentator
 
@@ -158,6 +159,15 @@ instrumentator.instrument(app).expose(app, endpoint="/metrics", tags=["monitorin
 telegram_app: Application | None = None
 
 
+async def _preload_embedding_model():
+    logger.info("Preloading embedding model in background...")
+    try:
+        await asyncio.to_thread(get_embedded_model)
+        logger.info("Embedding model preloaded.")
+    except Exception:
+        logger.exception("Embedding model preload failed.")
+
+
 @app.on_event("startup")
 async def startup():
     global telegram_app
@@ -167,14 +177,23 @@ async def startup():
         # so uvicorn starts accepting requests immediately
         async def _init_bot():
             global telegram_app
-            try:
-                telegram_app = await start_telegram_bot()
-            except Exception:
-                logger.exception("Failed to start Telegram bot")
+            retry_delay = 30
+            while telegram_app is None:
+                try:
+                    telegram_app = await start_telegram_bot()
+                except Exception:
+                    logger.exception(
+                        "Failed to start Telegram bot; retrying",
+                        extra={"retry_delay_s": retry_delay},
+                    )
+                    await asyncio.sleep(retry_delay)
 
         asyncio.create_task(_init_bot())
     else:
         logger.warning("Telegram bot disabled or TELEGRAM_BOT_TOKEN not set.")
+
+    if RAG_CONFIG.PRELOAD_EMBEDDING_MODEL:
+        asyncio.create_task(_preload_embedding_model())
 
     logger.info("FastAPI is ready to accept requests.")
 

@@ -14,7 +14,12 @@ services:
       - QDRANT_COLLECTION_NAME=definitions
       - API_ACESS_TOKEN=${GIGACHAT_AUTH_KEY}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - ENABLE_TELEGRAM_BOT=${ENABLE_TELEGRAM_BOT:-false}
+      - ENABLE_TELEGRAM_BOT=${ENABLE_TELEGRAM_BOT:-true}
+      - USE_CROSS_ENCODER=${USE_CROSS_ENCODER:-false}
+      - PRELOAD_EMBEDDING_MODEL=${PRELOAD_EMBEDDING_MODEL:-true}
+      - EMBEDDING_MODEL_NAME=${EMBEDDING_MODEL_NAME:-sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2}
+      - HF_HOME=/root/.cache/huggingface
+      - SENTENCE_TRANSFORMERS_HOME=/root/.cache/huggingface
       - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:-local-dev-token}
       - MINIO_ENDPOINT=minio:9000
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
@@ -25,6 +30,7 @@ services:
     volumes:
       - ./data:/app/data
       - models_data:/models
+      - hf_cache:/root/.cache/huggingface
     env_file:
       - .env
     working_dir: /app
@@ -64,8 +70,12 @@ services:
       - QDRANT_PORT=6333
       - QDRANT_COLLECTION_NAME=definitions
       - API_ACESS_TOKEN=${GIGACHAT_AUTH_KEY}
+      - EMBEDDING_MODEL_NAME=${EMBEDDING_MODEL_NAME:-sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2}
+      - HF_HOME=/root/.cache/huggingface
+      - SENTENCE_TRANSFORMERS_HOME=/root/.cache/huggingface
     volumes:
         - ./data:/app/data
+        - hf_cache:/root/.cache/huggingface
     depends_on:
       - qdrant
     env_file:
@@ -174,7 +184,8 @@ services:
     environment: *airflow-common-env
     volumes: *airflow-common-volumes
     command: >
-      bash -c "airflow webserver"
+      bash -c "airflow webserver -w 1 -t 300"
+    restart: on-failure
     ports:
       - "8080:8080"
     healthcheck:
@@ -269,3 +280,4 @@ volumes:
   airflow_tbank_knowledge:
   airflow_normalized:
   models_data:
+  hf_cache:

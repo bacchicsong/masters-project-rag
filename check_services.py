@@ -1,4 +1,5 @@
 import json
+import re
 import subprocess
 import sys
 import time
@@ -7,12 +8,17 @@ import urllib.request
 
 
 SEPARATOR = "=" * 72
+BOT_TOKEN_RE = re.compile(r"bot[0-9]+:[A-Za-z0-9_-]+")
 
 
 def print_header(title: str):
     print(SEPARATOR)
     print(f"  {title}")
     print(SEPARATOR)
+
+
+def redact_secrets(text: str) -> str:
+    return BOT_TOKEN_RE.sub("bot<redacted>", text)
 
 
 def fetch(url: str, timeout: int = 5):
@@ -56,6 +62,34 @@ def check_fastapi() -> bool:
     return ok
 
 
+def check_rag_readiness() -> bool:
+    print("- RAG readiness")
+    try:
+        status, body = fetch("http://localhost:8088/api/v1/health", timeout=5)
+        if status != 200:
+            print(f"  FAIL status {status}: {body[:300]}")
+            return False
+        data = json.loads(body)
+        model_status = data.get("embedding_model", {})
+        state = model_status.get("state")
+        model_name = model_status.get("model_name", "unknown")
+        dimension = model_status.get("dimension")
+        print(f"  embedding_model state={state} model={model_name} dim={dimension}")
+        if state == "loaded":
+            if dimension != 384:
+                print("  FAIL embedding dimension is not 384; Qdrant collection vectors are 384-dimensional")
+                return False
+            return True
+        if state == "failed":
+            print(f"  FAIL embedding model failed: {model_status.get('error')}")
+            return False
+        print("  FAIL embedding model is not loaded; Telegram answers may hang on the first query")
+        return False
+    except Exception as e:
+        print(f"  FAIL {e}")
+        return False
+
+
 def check_qdrant_collection() -> bool:
     print("- Qdrant collection definitions")
     try:
@@ -65,11 +99,31 @@ def check_qdrant_collection() -> bool:
             return False
         data = json.loads(body)
         result = data.get("result", {})
+        points_count = result.get("points_count", 0) or 0
         print(
             "  OK "
-            f"points={result.get('points_count', 'N/A')} "
+            f"points={points_count} "
             f"status={result.get('status', 'N/A')}"
         )
+        if points_count <= 0:
+            print("  FAIL collection is empty")
+            return False
+
+        req = urllib.request.Request(
+            "http://localhost:6333/collections/definitions/points/scroll",
+            data=json.dumps({"limit": 1, "with_payload": True, "with_vector": False}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=5) as response:
+            sample = json.loads(response.read().decode("utf-8"))
+        points = sample.get("result", {}).get("points", [])
+        if not points or not points[0].get("payload", {}).get("text"):
+            print("  FAIL could not read a payload sample with text")
+            return False
+        text_preview = points[0]["payload"]["text"][:100].replace("\n", " ")
+        text_preview = text_preview.encode("ascii", "backslashreplace").decode("ascii")
+        print(f"  OK sample text: {text_preview}")
         return True
     except Exception as e:
         print(f"  FAIL {e}")
@@ -105,7 +159,7 @@ def check_docker_ps() -> bool:
         result = subprocess.run(
             ["docker", "ps", "-a", "--format", "table {{.Names}}\t{{.Status}}\t{{.Ports}}"],
             capture_output=True,
-            timeout=15,
+            timeout=60,
             encoding="utf-8",
             errors="replace",
         )
@@ -124,14 +178,74 @@ def check_fastapi_logs() -> bool:
         result = subprocess.run(
             ["docker", "logs", "--tail", "20", "fastapi_app"],
             capture_output=True,
-            timeout=15,
+            timeout=60,
             encoding="utf-8",
             errors="replace",
         )
         logs = (result.stdout or "") + (result.stderr or "")
         for line in logs.strip().splitlines()[-5:]:
-            print(f"  {line}")
+            print(f"  {redact_secrets(line)}")
         return result.returncode == 0
+    except Exception as e:
+        print(f"  FAIL {e}")
+        return False
+
+
+def check_telegram_bot() -> bool:
+    print("- Telegram bot startup")
+    try:
+        env_result = subprocess.run(
+            ["docker", "exec", "fastapi_app", "python", "-c", "import os; print(os.getenv('TELEGRAM_BOT_TOKEN','')); print(os.getenv('ENABLE_TELEGRAM_BOT',''))"],
+            capture_output=True,
+            timeout=60,
+            encoding="utf-8",
+            errors="replace",
+        )
+        env_lines = (env_result.stdout or "").splitlines()
+        token_set = bool(env_lines[0].strip()) if env_lines else False
+        enabled = (env_lines[1].strip().lower() == "true") if len(env_lines) > 1 else False
+
+        logs_result = subprocess.run(
+            ["docker", "logs", "--tail", "500", "fastapi_app"],
+            capture_output=True,
+            timeout=60,
+            encoding="utf-8",
+            errors="replace",
+        )
+        logs = (logs_result.stdout or "") + (logs_result.stderr or "")
+        logs = redact_secrets(logs)
+        latest_start = logs.rsplit("Started server process", 1)[-1]
+
+        if not token_set:
+            print("  WARN TELEGRAM_BOT_TOKEN is not set; skipping bot polling check")
+            return True
+        if not enabled:
+            print("  FAIL TELEGRAM_BOT_TOKEN is set but ENABLE_TELEGRAM_BOT is not true")
+            return False
+        if "Failed to start Telegram bot" in latest_start:
+            print("  FAIL Telegram bot startup failed")
+            return False
+        if "Telegram bot disabled" in latest_start:
+            print("  FAIL Telegram bot is disabled")
+            return False
+        if "Telegram bot started and polling." not in latest_start:
+            print("  FAIL Telegram bot did not reach polling state")
+            return False
+        if (
+            "Lazy initializing Telegram bot RAG components..." in latest_start
+            and "Telegram bot RAG components initialized." not in latest_start
+        ):
+            print("  FAIL Telegram bot received a message but RAG initialization did not finish")
+            return False
+        if (
+            "Loading embedding model for query processing..." in latest_start
+            and "Embedding model loaded for query processing." not in latest_start
+        ):
+            print("  FAIL Telegram bot started query processing but embedding model did not finish loading")
+            return False
+
+        print("  OK Telegram bot started and polling")
+        return True
     except Exception as e:
         print(f"  FAIL {e}")
         return False
@@ -142,6 +256,7 @@ def main() -> int:
 
     checks = [
         ("FastAPI", check_fastapi()),
+        ("RAG readiness", check_rag_readiness()),
         ("FastAPI metrics", check_http("FastAPI metrics", "http://localhost:8088/metrics")),
         ("Qdrant health", check_http("Qdrant health", "http://localhost:6333/healthz")),
         ("Qdrant collection", check_qdrant_collection()),
@@ -154,6 +269,7 @@ def main() -> int:
         ("Prometheus targets", check_prometheus_targets()),
         ("Docker ps", check_docker_ps()),
         ("FastAPI logs", check_fastapi_logs()),
+        ("Telegram bot", check_telegram_bot()),
     ]
 
     print_header("Summary")

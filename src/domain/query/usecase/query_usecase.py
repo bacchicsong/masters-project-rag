@@ -32,8 +32,8 @@ class QueryUsecase(IQueryUsecase):
     def __init__(self, qdrant: QdrantClient, logger, config):
         self.qdrant = qdrant
         self.logger = logger
-        self.model = get_embedded_model()
-        self.cross_encoder = CrossEncoder(CROSS_ENCODER_MODEL_NAME)
+        self.model = None
+        self.cross_encoder = None
         self.collections_name = config.QDRANT_COLLECTION_NAME
         self.history = []
         self.config = config
@@ -103,6 +103,10 @@ class QueryUsecase(IQueryUsecase):
     async def _private_method_1_encode_topic(self, query_topic):
         if not query_topic:
             raise ValueError("Query topic cannot be empty.")
+        if self.model is None:
+            self.logger.info("Loading embedding model for query processing...")
+            self.model = get_embedded_model()
+            self.logger.info("Embedding model loaded for query processing.")
         with RAG_EMBEDDING_DURATION.time():
             return self.model.encode(query_topic)
 
@@ -123,10 +127,22 @@ class QueryUsecase(IQueryUsecase):
         if not candidates:
             return []
 
+        if not getattr(self.config, "USE_CROSS_ENCODER", False):
+            reranked = candidates[:CROSS_ENCODER_LIMIT]
+            self.logger.info(
+                f"Cross-encoder disabled; using top {len(reranked)} Qdrant candidates"
+            )
+            return [c.payload for c in reranked]
+
         pairs = []
         for candidate in candidates:
             text = candidate.payload.get("text", "")
             pairs.append([query, text])
+
+        if self.cross_encoder is None:
+            self.logger.info("Loading cross-encoder model for reranking...")
+            self.cross_encoder = CrossEncoder(CROSS_ENCODER_MODEL_NAME)
+            self.logger.info("Cross-encoder model loaded.")
 
         with RAG_RERANK_DURATION.time():
             scores = self.cross_encoder.predict(pairs)

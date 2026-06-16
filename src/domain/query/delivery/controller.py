@@ -13,6 +13,7 @@ from domain.query.delivery.dto.dto import (
 from domain.query.query import Query
 from domain.query.usecase.i_query_usecase import IQueryUsecase
 from infrastructure.di.dependencies import get_query_usecase, verify_token
+from infrastructure.db.qdrand import get_embedding_model_status
 from config.config import RAG_CONFIG
 from tools.fine_tune_bi_encoder import fine_tune
 from tools.minio_ingest import ingest_minio_to_qdrant
@@ -104,8 +105,11 @@ async def get_stats(
 
 
 @router.get("/health")
-async def health_check() -> dict[str, str]:
-    return {"status": "ok"}
+async def health_check() -> dict:
+    return {
+        "status": "ok",
+        "embedding_model": get_embedding_model_status(),
+    }
 
 
 @router.post("/feedback")

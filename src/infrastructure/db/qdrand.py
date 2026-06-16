@@ -1,5 +1,7 @@
 import json
+import logging
 import os
+import threading
 from pathlib import Path
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
@@ -10,12 +12,21 @@ from torch.utils.data import DataLoader
 from config.config import RAG_CONFIG
 
 QDRANT_TIMEOUT = 180
-EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+EMBEDDING_MODEL_NAME = RAG_CONFIG.EMBEDDING_MODEL_NAME
 FINE_TUNED_MODEL_PATH = str(Path(__file__).parent.parent.parent / "models" / "fine_tuned_bi_encoder")
 USE_FINE_TUNED = os.getenv("USE_FINE_TUNED_MODEL", "false").lower() == "true"
+MODEL_CACHE_FOLDER = os.getenv("SENTENCE_TRANSFORMERS_HOME") or None
 
 # ── Cached embedding model (singleton) ──────────────────────────────
 _embedded_model: "SentenceTransformer | None" = None
+_embedded_model_lock = threading.Lock()
+_embedded_model_status = {
+    "state": "not_loaded",
+    "model_name": EMBEDDING_MODEL_NAME,
+    "dimension": None,
+    "error": None,
+}
+logger = logging.getLogger("app_logger")
 
 def chunk_text(text, size=100, overlap=20):
     words = text.split()
@@ -40,11 +51,57 @@ def get_embedded_model() -> SentenceTransformer:
     if _embedded_model is not None:
         return _embedded_model
 
-    if USE_FINE_TUNED and os.path.isdir(FINE_TUNED_MODEL_PATH):
-        _embedded_model = SentenceTransformer(FINE_TUNED_MODEL_PATH)
-    else:
-        _embedded_model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+    with _embedded_model_lock:
+        if _embedded_model is not None:
+            return _embedded_model
+
+        model_name = (
+            FINE_TUNED_MODEL_PATH
+            if USE_FINE_TUNED and os.path.isdir(FINE_TUNED_MODEL_PATH)
+            else EMBEDDING_MODEL_NAME
+        )
+        _embedded_model_status.update(
+            {
+                "state": "loading",
+                "model_name": model_name,
+                "dimension": None,
+                "error": None,
+            }
+        )
+        logger.info(f"Loading embedding model: {model_name}")
+        try:
+            _embedded_model = SentenceTransformer(
+                model_name,
+                cache_folder=MODEL_CACHE_FOLDER,
+            )
+            _embedded_model_status.update(
+                {
+                    "state": "loaded",
+                    "dimension": _embedded_model.get_sentence_embedding_dimension(),
+                    "error": None,
+                }
+            )
+            logger.info(
+                "Embedding model loaded",
+                extra={
+                    "model_name": model_name,
+                    "dimension": _embedded_model_status["dimension"],
+                },
+            )
+        except Exception as exc:
+            _embedded_model_status.update(
+                {
+                    "state": "failed",
+                    "error": str(exc),
+                }
+            )
+            logger.exception("Embedding model loading failed")
+            raise
     return _embedded_model
+
+
+def get_embedding_model_status() -> dict:
+    return dict(_embedded_model_status)
 
 
 def init_qdrant(logger) -> QdrantClient:

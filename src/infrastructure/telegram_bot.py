@@ -1,4 +1,5 @@
 import logging
+import asyncio
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -21,6 +22,37 @@ logger = logging.getLogger("app_logger")
 
 # Callback data prefix for feedback buttons
 FEEDBACK_PREFIX = "feedback"
+RAG_INIT_TIMEOUT_SECONDS = 120
+RAG_QUERY_TIMEOUT_SECONDS = 180
+
+
+def _build_query_usecase() -> QueryUsecase:
+    qdrant_client = init_qdrant(logger)
+    return QueryUsecase(qdrant=qdrant_client, logger=logger, config=RAG_CONFIG)
+
+
+def _process_query_sync(usecase: QueryUsecase, user_text: str):
+    return asyncio.run(usecase.processes_query(Query(query_topic=user_text)))
+
+
+async def get_or_create_query_usecase(context: ContextTypes.DEFAULT_TYPE) -> QueryUsecase:
+    usecase: QueryUsecase | None = context.bot_data.get("query_usecase")
+    if usecase:
+        return usecase
+
+    lock = context.bot_data.setdefault("query_usecase_lock", asyncio.Lock())
+    async with lock:
+        usecase = context.bot_data.get("query_usecase")
+        if usecase:
+            return usecase
+        logger.info("Lazy initializing Telegram bot RAG components...")
+        usecase = await asyncio.wait_for(
+            asyncio.to_thread(_build_query_usecase),
+            timeout=RAG_INIT_TIMEOUT_SECONDS,
+        )
+        context.bot_data["query_usecase"] = usecase
+        logger.info("Telegram bot RAG components initialized.")
+        return usecase
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -36,16 +68,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
 
-    usecase: QueryUsecase = context.bot_data.get("query_usecase")
-    if not usecase:
-        await update.message.reply_text("❌ Ошибка: RAG-система ещё не инициализирована.")
-        return
-
     await update.message.chat.send_action(action="typing")
 
     try:
-        query = Query(query_topic=user_text)
-        result = await usecase.processes_query(query)
+        if not context.bot_data.get("query_usecase"):
+            await update.message.reply_text("Инициализирую RAG-систему, первый ответ может занять немного больше времени.")
+        usecase = await get_or_create_query_usecase(context)
+        result = await asyncio.wait_for(
+            asyncio.to_thread(_process_query_sync, usecase, user_text),
+            timeout=RAG_QUERY_TIMEOUT_SECONDS,
+        )
 
         # Build inline keyboard with feedback buttons
         keyboard = [
@@ -59,7 +91,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(result.text, reply_markup=reply_markup)
     except Exception as e:
         logger.error(f"Telegram bot error: {e}", exc_info=True)
-        await update.message.reply_text("⚠️ Произошла ошибка при обработке запроса.")
+        if isinstance(e, asyncio.TimeoutError):
+            await update.message.reply_text(
+                "⚠️ RAG-система не успела подготовить ответ. Проверьте логи FastAPI: вероятно, модель эмбеддингов еще скачивается или зависла при инициализации."
+            )
+        else:
+            await update.message.reply_text("⚠️ Произошла ошибка при обработке запроса.")
 
 
 async def handle_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -78,7 +115,7 @@ async def handle_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     usecase: QueryUsecase = context.bot_data.get("query_usecase")
     if not usecase:
-        await query.edit_message_text(text="❌ Ошибка: RAG-система ещё не инициализирована.")
+        await query.message.reply_text("Оценку пока нельзя сохранить: RAG-система ещё не обработала запрос в этом процессе.")
         return
 
     liked = action == "like"
@@ -114,17 +151,19 @@ async def handle_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def start_telegram_bot() -> Application:
-    logger.info("Initializing Telegram bot RAG components...")
-    qdrant_client = init_qdrant(logger)
-    usecase = QueryUsecase(qdrant=qdrant_client, logger=logger, config=RAG_CONFIG)
+    logger.info("Starting Telegram bot without eager RAG model loading...")
 
     application = (
         Application.builder()
         .token(RAG_CONFIG.TELEGRAM_BOT_TOKEN)
+        .connect_timeout(30)
+        .read_timeout(30)
+        .write_timeout(30)
+        .pool_timeout(30)
+        .get_updates_connect_timeout(30)
+        .get_updates_read_timeout(60)
         .build()
     )
-
-    application.bot_data["query_usecase"] = usecase
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(handle_feedback, pattern=f"^{FEEDBACK_PREFIX}:"))
