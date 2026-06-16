@@ -1,3 +1,3 @@
-dataset,chunks,missing_text,duplicate_texts,chars_min,chars_median,chars_mean,chars_p95,chars_max,words_median,words_mean,words_max
-T-Bank articles,4795,0,3790,34,839,946.3,2180,7849,121,133.4,1128
-Theoretical texts,7008,0,0,74,1031.0,1027.4,1157,1323,140.0,140.6,371
+dataset,chunks,missing_text,duplicate_texts,duplicate_share,unique_sources,translated_share,chars_min,chars_p25,chars_median,chars_mean,chars_p95,chars_max,words_median,words_mean,words_max,expansion_ratio_mean,expansion_ratio_median
+T-Bank articles,4795,0,3790,0.7904,1,0.0,34,492,839,946.3,2180,7849,121,133.4,1128,1.212,1.123
+Theoretical texts,7008,0,0,0.0,7,0.9247,74,980,1031.0,1027.4,1157,1323,140.0,140.6,371,1.078,1.073

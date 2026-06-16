@@ -1,14 +1,18 @@
 import os
+from pathlib import Path
 
 import mlflow
 
-MLFLOW_TRACKING_URI = "http://localhost:5000"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_TRACKING_URI = f"sqlite:///{(PROJECT_ROOT / 'research' / 'presentation_assets' / 'mlflow_tracking.db').as_posix()}"
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", DEFAULT_TRACKING_URI)
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 
-os.environ["MLFLOW_S3_ENDPOINT_URL"] = "http://localhost:9000"
-os.environ["AWS_ACCESS_KEY_ID"] = "minioadmin"
-os.environ["AWS_SECRET_ACCESS_KEY"] = "minioadmin"
-os.environ["MLFLOW_S3_IGNORE_TLS"] = "true"
+if MLFLOW_TRACKING_URI.startswith("http"):
+    os.environ["MLFLOW_S3_ENDPOINT_URL"] = "http://localhost:9000"
+    os.environ["AWS_ACCESS_KEY_ID"] = "minioadmin"
+    os.environ["AWS_SECRET_ACCESS_KEY"] = "minioadmin"
+    os.environ["MLFLOW_S3_IGNORE_TLS"] = "true"
 
 EXPERIMENT_BASE_NAME = "rag-experiments-golden"
 

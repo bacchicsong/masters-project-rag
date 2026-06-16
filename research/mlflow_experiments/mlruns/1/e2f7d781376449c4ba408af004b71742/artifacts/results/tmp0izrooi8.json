@@ -1,0 +1,228 @@
+{
+  "metrics": {
+    "mean_P@1": 0.35,
+    "mean_R@1": 0.35,
+    "mean_P@3": 0.15,
+    "mean_R@3": 0.45,
+    "mean_P@5": 0.1,
+    "mean_R@5": 0.5,
+    "mean_P@8": 0.08125,
+    "mean_R@8": 0.65,
+    "MRR": 0.4150595238095239,
+    "avg_search_latency_s": 0.008944530000371742,
+    "p95_search_latency_s": 0.03005046499747556
+  },
+  "predictions": {
+    "что_такое_офз_1": [
+      "article_47",
+      "article_62",
+      "article_31",
+      "article_16",
+      "article_135",
+      "article_56",
+      "article_153",
+      "article_83"
+    ],
+    "что_такое_офз_2": [
+      "article_47",
+      "article_68",
+      "article_50",
+      "article_34",
+      "article_135",
+      "article_30",
+      "article_153",
+      "article_31"
+    ],
+    "что_такое_офз_3": [
+      "article_30",
+      "article_135",
+      "article_34",
+      "article_83",
+      "article_31",
+      "article_47",
+      "article_8",
+      "article_153"
+    ],
+    "что_такое_офз_4": [
+      "article_94",
+      "article_145",
+      "article_68",
+      "article_33",
+      "article_101",
+      "article_83",
+      "article_45",
+      "article_79"
+    ],
+    "что_такое_офз_5": [
+      "article_153",
+      "article_135",
+      "article_46",
+      "article_41",
+      "article_150",
+      "article_145",
+      "article_143",
+      "article_89"
+    ],
+    "терминал_т_инвестиций_1": [
+      "article_108",
+      "article_104",
+      "article_153",
+      "article_103",
+      "article_145",
+      "article_150",
+      "article_100",
+      "article_143"
+    ],
+    "терминал_т_инвестиций_2": [
+      "article_108",
+      "article_27",
+      "article_104",
+      "article_145",
+      "article_103",
+      "article_106",
+      "article_153",
+      "article_92"
+    ],
+    "терминал_т_инвестиций_3": [
+      "article_108",
+      "article_104",
+      "article_103",
+      "article_106",
+      "article_145",
+      "article_45",
+      "article_68",
+      "article_101"
+    ],
+    "терминал_т_инвестиций_4": [
+      "article_110",
+      "article_145",
+      "article_106",
+      "article_45",
+      "article_73",
+      "article_78",
+      "article_120",
+      "article_68"
+    ],
+    "терминал_т_инвестиций_5": [
+      "article_148",
+      "article_58",
+      "article_105",
+      "article_131",
+      "article_111",
+      "article_45",
+      "article_3",
+      "article_149"
+    ],
+    "какие_документы_нужны_при_подаче_деклара_1": [
+      "article_24",
+      "article_30",
+      "article_130",
+      "article_93",
+      "article_87",
+      "article_5",
+      "article_83",
+      "article_85"
+    ],
+    "какие_документы_нужны_при_подаче_деклара_2": [
+      "article_24",
+      "article_30",
+      "article_87",
+      "article_130",
+      "article_83",
+      "article_93",
+      "article_82",
+      "article_85"
+    ],
+    "какие_документы_нужны_при_подаче_деклара_3": [
+      "article_31",
+      "article_16",
+      "article_24",
+      "article_30",
+      "article_87",
+      "article_17",
+      "article_12",
+      "article_83"
+    ],
+    "какие_документы_нужны_при_подаче_деклара_4": [
+      "article_31",
+      "article_83",
+      "article_30",
+      "article_89",
+      "article_63",
+      "article_14",
+      "article_87",
+      "article_24"
+    ],
+    "какие_документы_нужны_при_подаче_деклара_5": [
+      "article_30",
+      "article_31",
+      "article_63",
+      "article_23",
+      "article_16",
+      "article_87",
+      "article_24",
+      "article_83"
+    ],
+    "виды_бирж_1": [
+      "article_45",
+      "article_68",
+      "article_145",
+      "article_0",
+      "article_78",
+      "article_135",
+      "article_49",
+      "article_94"
+    ],
+    "виды_бирж_2": [
+      "article_68",
+      "article_45",
+      "article_135",
+      "article_145",
+      "article_42",
+      "article_78",
+      "article_73",
+      "article_130"
+    ],
+    "виды_бирж_3": [
+      "article_68",
+      "article_45",
+      "article_49",
+      "article_145",
+      "article_94",
+      "article_0",
+      "article_1",
+      "article_107"
+    ],
+    "виды_бирж_4": [
+      "article_45",
+      "article_68",
+      "article_145",
+      "article_49",
+      "article_135",
+      "article_120",
+      "article_153",
+      "article_94"
+    ],
+    "виды_бирж_5": [
+      "article_135",
+      "article_153",
+      "article_42",
+      "article_53",
+      "article_145",
+      "article_45",
+      "article_55",
+      "article_41"
+    ]
+  },
+  "golden_stats": {
+    "total_qa": 627,
+    "matched_queries": 613,
+    "unmatched_queries": 14,
+    "unmatched_titles": [
+      "Ветер перемен: что делать инвестору",
+      "Продажа заблокированных иностранных бумаг в Т‑Инвестициях",
+      "Т‑Помощь. Инвестиции"
+    ],
+    "used_queries": 20
+  }
+}

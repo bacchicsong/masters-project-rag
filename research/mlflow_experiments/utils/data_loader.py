@@ -1,10 +1,86 @@
 import json
+import re
+import unicodedata
+from collections import defaultdict
 from pathlib import Path
 
-from utils.golden_set_loader import attach_ground_truth, load_qa_from_zip
+from utils.golden_set_loader import attach_ground_truth, load_qa_from_zip, normalize_title
 
 USE_MOCK = False
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+STRUCTURED_TBANK_PATH = PROJECT_ROOT / "research" / "data-collection" / "theoretical-texts" / "tbank_articles.json"
+
+
+def _looks_like_chunk_corpus(docs: list[dict]) -> bool:
+    if not docs:
+        return False
+    sample = docs[0]
+    return "text" in sample and "meta" in sample and "sections" not in sample
+
+
+def _load_structured_tbank_articles() -> list[dict]:
+    if not STRUCTURED_TBANK_PATH.exists():
+        return []
+    with STRUCTURED_TBANK_PATH.open(encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _parse_chunk_header(text: str) -> tuple[str, str, str]:
+    raw_text = text or ""
+    header, body = raw_text.split("\n\n", 1) if "\n\n" in raw_text else (raw_text, raw_text)
+    parts = [part.strip() for part in header.split(">") if part.strip()]
+    title = parts[0] if parts else header.strip()
+    heading = parts[-1] if len(parts) > 1 else title
+    return title, heading, body.strip()
+
+
+def _reconstruct_articles_from_chunks(chunk_docs: list[dict]) -> list[dict]:
+    structured_articles = _load_structured_tbank_articles()
+    structured_index = {}
+    for article in structured_articles:
+        title = article.get("title")
+        if not title:
+            continue
+        structured_index.setdefault(
+            normalize_title(title),
+            {
+                "title": title,
+                "url": article.get("url", ""),
+            },
+        )
+
+    grouped_chunks = defaultdict(list)
+    grouped_meta = {}
+    for chunk in chunk_docs:
+        title, heading, content = _parse_chunk_header(chunk.get("text", ""))
+        if not title:
+            continue
+        title_key = normalize_title(title)
+        canonical = structured_index.get(title_key, {"title": title, "url": ""})
+        grouped_chunks[title_key].append(
+            {
+                "heading": heading,
+                "content": content or chunk.get("text", ""),
+            }
+        )
+        grouped_meta.setdefault(title_key, canonical)
+
+    reconstructed = []
+    for idx, (title_key, sections) in enumerate(grouped_chunks.items()):
+        article_meta = grouped_meta[title_key]
+        reconstructed.append(
+            {
+                "id": f"article_{idx}",
+                "title": article_meta["title"],
+                "url": article_meta["url"],
+                "sections": [{"heading": item["heading"], "content": [item["content"]]} for item in sections],
+            }
+        )
+
+    print(
+        f"[RECONSTRUCT] built {len(reconstructed)} articles from {len(chunk_docs)} chunks"
+    )
+    return reconstructed if reconstructed else chunk_docs
 
 
 def load_documents(data_dir="data", max_docs=None, file_pattern="*.json"):
@@ -50,6 +126,10 @@ def load_golden_eval_set(num_queries=None, zip_path=None, use_mock=None):
         return docs, queries, stats
 
     docs = load_documents(file_pattern="tbank_articles_clean.json")
+    if not docs:
+        docs = load_documents(file_pattern="tbank_articles.json")
+    if _looks_like_chunk_corpus(docs):
+        docs = _reconstruct_articles_from_chunks(docs)
     qa = load_qa_from_zip(Path(zip_path) if zip_path else None)
     queries, stats = attach_ground_truth(qa, docs)
 
