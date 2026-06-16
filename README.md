@@ -39,16 +39,16 @@ masters-project-rag/
 │   │       │       └── dto.py       # DTO для запросов/ответов API
 │   │       └── usecase/
 │   │           ├── i_query_usecase.py  # Интерфейс UseCase
-│   │           └── query_usecase.py    # Реализация UseCase (поиск + генерация)
+│   │           └── query_usecase.py    # Реализация UseCase (поиск + генерация + feedback)
 │   │
 │   ├── infrastructure/              # Инфраструктурный слой
-│   │   ├── telegram_bot.py          # Telegram-бот на python-telegram-bot
+│   │   ├── telegram_bot.py          # Telegram-бот: ответы + inline-кнопки фидбека (👍/👎)
 │   │   ├── db/
 │   │   │   └── qdrand.py            # Работа с Qdrant (инициализация, вставка, эмбеддинги)
 │   │   ├── di/
 │   │   │   └── dependencies.py      # DI-контейнер (FastAPI Depends)
 │   │   └── feedback/
-│   │       └── feedback_storage.py  # Хранение фидбека для дообучения (triplet loss)
+│   │       └── feedback_storage.py  # Хранение фидбека для дообучения (triplet loss → JSONL)
 │   │
 │   └── tools/                       # Вспомогательные скрипты
 │       ├── fill_qdrant.py           # Загрузка данных в Qdrant
@@ -95,7 +95,9 @@ masters-project-rag/
 │
 └── data/                            # Данные для загрузки в Qdrant
     ├── tbank_articles.json          # Статьи Т-Банка
-    └── theoretical_texts.json       # Теоретические тексты
+    ├── theoretical_texts.json       # Теоретические тексты
+    └── feedback/                    # Фидбек-данные для дообучения
+        └── feedback.jsonl           # Триплеты (query, positive, negative)
 ```
 
 ---
@@ -184,7 +186,45 @@ docker-compose run --rm loader
 | `GET` | `/history` | Получить историю запросов |
 | `GET` | `/stats` | Получить статистику по запросам |
 | `GET` | `/health` | Проверка здоровья сервиса |
-| `POST` | `/feedback` | Отправить фидбек (лайк/дизлайк) |
+| `POST` | `/feedback` | Отправить фидбек (лайк/дизлайк). Тело: `{"query_id": "...", "liked": true/false}`. Сохраняет триплеты для дообучения |
+
+---
+
+## 🔄 Обратная связь и дообучение
+
+### Как работает Feedback Loop
+
+Система поддерживает цикл обратной связи, позволяющий улучшать качество поиска на основе оценок пользователей:
+
+```
+Пользователь → Оценка ответа (👍/👎) → Сохранение триплетов → Дообучение bi-encoder → Улучшение поиска
+```
+
+**Сбор фидбека:**
+- В **Telegram-боте**: после каждого ответа бот показывает inline-кнопки «👍 Понравилось» / «👎 Не понравилось». Нажатие кнопки сохраняет триплет и показывает пользователю краткое подтверждение без технических деталей.
+- Через **REST API**: эндпоинт `POST /api/v1/feedback` принимает JSON с `query_id` и флагом `liked`.
+
+**Формирование триплетов:**
+- При **лайке**: positive — верхний документ из reranked результатов, negative — документы с низким рейтингом из исходного поиска.
+- При **дизлайке**: negative — верхние документы из reranked результатов, positive — документы из нижних позиций или указанные пользователем.
+- Триплеты сохраняются в `data/feedback/feedback.jsonl` в формате JSONL.
+
+**Дообучение bi-encoder:**
+- Скрипт: `python -m src.tools.fine_tune_bi_encoder`
+- Базовая модель: `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`
+- Loss-функция: **CosineSimilarityLoss** (сближает positive-пары, отдаляет negative-пары)
+- Минимальное количество триплетов для запуска обучения: **10**
+- Эпохи: 3, batch size: 32, warmup: 100 шагов
+- Результат: модель сохраняется в `models/fine_tuned_bi_encoder/`
+
+**Активация дообученной модели:**
+Для использования дообученной модели установите флаг в `src/infrastructure/db/qdrand.py`:
+
+```python
+USE_FINE_TUNED = True
+```
+
+Модель автоматически подхватится при следующем запуске сервиса. Для обновления поисковых эмбеддингов необходимо переиндексировать документы в Qdrant.
 
 ---
 
