@@ -1,7 +1,10 @@
 import logging
 import asyncio
+import html
+import re
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.error import BadRequest
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -24,6 +27,7 @@ logger = logging.getLogger("app_logger")
 FEEDBACK_PREFIX = "feedback"
 RAG_INIT_TIMEOUT_SECONDS = 120
 RAG_QUERY_TIMEOUT_SECONDS = 180
+MARKDOWN_BOLD_RE = re.compile(r"\*\*(.+?)\*\*", re.DOTALL)
 
 
 def _build_query_usecase() -> QueryUsecase:
@@ -33,6 +37,24 @@ def _build_query_usecase() -> QueryUsecase:
 
 def _process_query_sync(usecase: QueryUsecase, user_text: str):
     return asyncio.run(usecase.processes_query(Query(query_topic=user_text)))
+
+
+def markdown_to_telegram_html(text: str) -> str:
+    escaped = html.escape(text)
+    return MARKDOWN_BOLD_RE.sub(r"<b>\1</b>", escaped)
+
+
+async def reply_rag_answer(update: Update, text: str, reply_markup: InlineKeyboardMarkup):
+    html_text = markdown_to_telegram_html(text)
+    try:
+        await update.message.reply_text(
+            html_text,
+            reply_markup=reply_markup,
+            parse_mode="HTML",
+        )
+    except BadRequest:
+        logger.warning("Telegram rejected formatted answer; falling back to plain text", exc_info=True)
+        await update.message.reply_text(text, reply_markup=reply_markup)
 
 
 async def get_or_create_query_usecase(context: ContextTypes.DEFAULT_TYPE) -> QueryUsecase:
@@ -88,7 +110,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        await update.message.reply_text(result.text, reply_markup=reply_markup)
+        await reply_rag_answer(update, result.text, reply_markup)
     except Exception as e:
         logger.error(f"Telegram bot error: {e}", exc_info=True)
         if isinstance(e, asyncio.TimeoutError):
