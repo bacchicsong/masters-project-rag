@@ -1,10 +1,11 @@
 import logging
 
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
     CommandHandler,
     MessageHandler,
+    CallbackQueryHandler,
     filters,
     ContextTypes,
 )
@@ -12,10 +13,14 @@ from telegram.ext import (
 from config.config import RAG_CONFIG
 from domain.query.query import Query
 from domain.query.usecase.query_usecase import QueryUsecase
+from domain.query.delivery.dto.dto import FeedbackRequestDTO
 from infrastructure.db.qdrand import init_qdrant
 
 
 logger = logging.getLogger("app_logger")
+
+# Callback data prefix for feedback buttons
+FEEDBACK_PREFIX = "feedback"
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -41,10 +46,71 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         query = Query(query_topic=user_text)
         result = await usecase.processes_query(query)
-        await update.message.reply_text(result.text)
+
+        # Build inline keyboard with feedback buttons
+        keyboard = [
+            [
+                InlineKeyboardButton("👍 Понравилось", callback_data=f"{FEEDBACK_PREFIX}:like:{result.query_id}"),
+                InlineKeyboardButton("👎 Не понравилось", callback_data=f"{FEEDBACK_PREFIX}:dislike:{result.query_id}"),
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await update.message.reply_text(result.text, reply_markup=reply_markup)
     except Exception as e:
         logger.error(f"Telegram bot error: {e}", exc_info=True)
         await update.message.reply_text("⚠️ Произошла ошибка при обработке запроса.")
+
+
+async def handle_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle feedback button clicks (like/dislike)."""
+    query = update.callback_query
+    await query.answer()
+
+    data = query.data
+    # Expected format: "feedback:like:<query_id>" or "feedback:dislike:<query_id>"
+    parts = data.split(":")
+    if len(parts) != 3:
+        logger.warning(f"Invalid callback data format: {data}")
+        return
+
+    _, action, query_id = parts
+
+    usecase: QueryUsecase = context.bot_data.get("query_usecase")
+    if not usecase:
+        await query.edit_message_text(text="❌ Ошибка: RAG-система ещё не инициализирована.")
+        return
+
+    liked = action == "like"
+
+    try:
+        feedback = FeedbackRequestDTO(
+            query_id=query_id,
+            liked=liked,
+        )
+        # save_feedback creates triplets — the return value (triplet count)
+        # is intentionally NOT shown to the user to avoid service messages
+        # like "(Создано 1 обучающих триплетов)"
+        usecase.save_feedback(feedback)
+
+        # Show a user-friendly confirmation without technical details
+        if liked:
+            confirmation = "✅ Спасибо за оценку! Рад быть полезным."
+        else:
+            confirmation = "✅ Принято, постараемся стать лучше!"
+
+        # Edit the message to replace buttons with confirmation
+        original_text = query.message.text or ""
+        await query.edit_message_text(
+            text=original_text,
+            reply_markup=None,  # Remove inline keyboard
+        )
+        # Send a short confirmation as a new message
+        await query.message.reply_text(confirmation)
+
+    except Exception as e:
+        logger.error(f"Feedback handling error: {e}", exc_info=True)
+        await query.message.reply_text("⚠️ Не удалось сохранить оценку.")
 
 
 async def start_telegram_bot() -> Application:
@@ -61,6 +127,7 @@ async def start_telegram_bot() -> Application:
     application.bot_data["query_usecase"] = usecase
 
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(handle_feedback, pattern=f"^{FEEDBACK_PREFIX}:"))
     application.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)
     )
