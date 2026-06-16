@@ -1,5 +1,8 @@
 {
-  "articles_with_qa": 164,
-  "question_markers": 670,
-  "avg_qa_file_chars": 2088.6
+  "articles_with_qa": 134,
+  "question_markers": 627,
+  "avg_questions_per_article": 4.68,
+  "median_question_words": 8,
+  "mean_question_words": 8.29,
+  "max_question_words": 22
 }
