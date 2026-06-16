@@ -14,6 +14,7 @@
 """
 
 import sys
+import os
 from pathlib import Path
 
 # Add src to path so we can import infrastructure modules
@@ -30,8 +31,14 @@ from torch.utils.data import DataLoader
 
 from infrastructure.feedback.feedback_storage import FeedbackStorage
 
-EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-OUTPUT_PATH = str(Path(__file__).parent.parent.parent / "models" / "fine_tuned_bi_encoder")
+EMBEDDING_MODEL_NAME = os.getenv(
+    "EMBEDDING_MODEL_NAME",
+    "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+)
+OUTPUT_PATH = os.getenv(
+    "FINE_TUNED_MODEL_PATH",
+    str(SRC_DIR / "models" / "fine_tuned_bi_encoder"),
+)
 BATCH_SIZE = 32
 EPOCHS = 3
 WARMUP_STEPS = 100
@@ -67,7 +74,7 @@ def fine_tune():
     """Запускает процесс дообучения би-энкодера."""
     examples = load_triplets()
     if not examples:
-        return
+        return {"status": "skipped", "reason": "not_enough_triplets", "examples": 0}
 
     # Разделяем на train/eval (90/10)
     split = int(len(examples) * 0.9)
@@ -112,6 +119,13 @@ def fine_tune():
 
     print(f"\n✅ Модель сохранена в: {OUTPUT_PATH}")
     print("Для использования обновите EMBEDDING_MODEL_NAME в src/infrastructure/db/qdrand.py")
+    return {
+        "status": "trained",
+        "examples": len(examples),
+        "train_examples": len(train_examples),
+        "eval_examples": len(eval_examples),
+        "output_path": OUTPUT_PATH,
+    }
 
 
 if __name__ == "__main__":

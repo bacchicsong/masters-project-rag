@@ -285,6 +285,76 @@
           "custom": { "drawStyle": "line" }
         }
       }
+    },
+    {
+      "id": 18,
+      "title": "Documents Upserted From MinIO",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 28 },
+      "targets": [
+        {
+          "expr": "increase(rag_documents_upserted_total[1h])",
+          "legendFormat": "chunks/hour"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "bars" }
+        }
+      }
+    },
+    {
+      "id": 19,
+      "title": "MinIO Objects Processed",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 36 },
+      "targets": [
+        {
+          "expr": "sum(rag_minio_objects_ingested_total)",
+          "legendFormat": "objects"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      }
+    },
+    {
+      "id": 20,
+      "title": "Ingestion Duration p95",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 36 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(rag_ingestion_duration_seconds_bucket[1h])) by (le))",
+          "legendFormat": "p95"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      }
+    },
+    {
+      "id": 21,
+      "title": "Fine-Tune Runs",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 36 },
+      "targets": [
+        {
+          "expr": "sum by (status) (increase(rag_fine_tune_runs_total[24h]))",
+          "legendFormat": "{{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "bars" }
+        }
+      }
     }
   ],
   "schemaVersion": 39,

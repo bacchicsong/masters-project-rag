@@ -6,7 +6,7 @@ from domain.query.query import Query, QueryResults
 from domain.query.delivery.dto.dto import HistoryResponseDTO, HistoryItemDTO, FeedbackRequestDTO
 from domain.query.usecase.i_query_usecase import IQueryUsecase
 from infrastructure.db.qdrand import get_embedded_model
-from infrastructure.feedback.feedback_storage import FeedbackStorage, TripletRecord
+from infrastructure.feedback.feedback_storage import FeedbackStorage, FeedbackRecord, TripletRecord
 from tools.prometheus_metrics import (
     RAG_QUERY_DURATION,
     RAG_QUERIES_TOTAL,
@@ -32,8 +32,8 @@ class QueryUsecase(IQueryUsecase):
     def __init__(self, qdrant: QdrantClient, logger, config):
         self.qdrant = qdrant
         self.logger = logger
-        self.model = get_embedded_model()
-        self.cross_encoder = CrossEncoder(CROSS_ENCODER_MODEL_NAME)
+        self.model = None
+        self.cross_encoder = None
         self.collections_name = config.QDRANT_COLLECTION_NAME
         self.history = []
         self.config = config
@@ -103,6 +103,10 @@ class QueryUsecase(IQueryUsecase):
     async def _private_method_1_encode_topic(self, query_topic):
         if not query_topic:
             raise ValueError("Query topic cannot be empty.")
+        if self.model is None:
+            self.logger.info("Loading embedding model for query processing...")
+            self.model = get_embedded_model()
+            self.logger.info("Embedding model loaded for query processing.")
         with RAG_EMBEDDING_DURATION.time():
             return self.model.encode(query_topic)
 
@@ -123,10 +127,22 @@ class QueryUsecase(IQueryUsecase):
         if not candidates:
             return []
 
+        if not getattr(self.config, "USE_CROSS_ENCODER", False):
+            reranked = candidates[:CROSS_ENCODER_LIMIT]
+            self.logger.info(
+                f"Cross-encoder disabled; using top {len(reranked)} Qdrant candidates"
+            )
+            return [c.payload for c in reranked]
+
         pairs = []
         for candidate in candidates:
             text = candidate.payload.get("text", "")
             pairs.append([query, text])
+
+        if self.cross_encoder is None:
+            self.logger.info("Loading cross-encoder model for reranking...")
+            self.cross_encoder = CrossEncoder(CROSS_ENCODER_MODEL_NAME)
+            self.logger.info("Cross-encoder model loaded.")
 
         with RAG_RERANK_DURATION.time():
             scores = self.cross_encoder.predict(pairs)
@@ -183,12 +199,14 @@ class QueryUsecase(IQueryUsecase):
             "query": query.query_topic,
             "all_candidates": candidates,
             "reranked": reranked,
+            "answer": None,
         }
 
         with RAG_QUERY_DURATION.time():
             model_answer = await self._private_method_3_generate_answer(
                 reranked, query.query_topic
             )
+        self._query_context[query_id]["answer"] = model_answer["answer"]
         RAG_QUERIES_TOTAL.inc()
 
         doc_ids = list(range(len(reranked)))
@@ -216,6 +234,7 @@ class QueryUsecase(IQueryUsecase):
             return 0
 
         query = ctx["query"]
+        answer = ctx.get("answer") or ""
         reranked = ctx["reranked"]
         all_candidates = ctx.get("all_candidates", [])
 
@@ -291,6 +310,29 @@ class QueryUsecase(IQueryUsecase):
                             self.feedback_storage.save_triplet(triplet)
                             triplets_count += 1
                             break
+
+        retrieved_docs = []
+        for doc in reranked:
+            retrieved_docs.append(
+                {
+                    "chunk_id": doc.get("chunk_id"),
+                    "title": doc.get("title"),
+                    "text": (doc.get("text") or "")[:1000],
+                    "meta": doc.get("meta", {}),
+                }
+            )
+        self.feedback_storage.save_feedback_event(
+            FeedbackRecord(
+                query_id=feedback.query_id,
+                query=query,
+                answer=answer,
+                liked=feedback.liked,
+                timestamp=timestamp,
+                retrieved_docs=retrieved_docs,
+                relevant_doc_ids=feedback.relevant_doc_ids,
+                triplets_created=triplets_count,
+            )
+        )
 
         # Clean up context
         self._query_context.pop(feedback.query_id, None)

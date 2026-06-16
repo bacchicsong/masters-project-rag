@@ -1,7 +1,7 @@
 from typing import Optional
 from dotenv import load_dotenv
 
-from fastapi import APIRouter, Depends, Form, HTTPException
+from fastapi import APIRouter, Depends, Form, Header, HTTPException
 
 from domain.query.delivery.dto.dto import (
     QueryResponseDTO,
@@ -13,6 +13,11 @@ from domain.query.delivery.dto.dto import (
 from domain.query.query import Query
 from domain.query.usecase.i_query_usecase import IQueryUsecase
 from infrastructure.di.dependencies import get_query_usecase, verify_token
+from infrastructure.db.qdrand import get_embedding_model_status
+from config.config import RAG_CONFIG
+from tools.fine_tune_bi_encoder import fine_tune
+from tools.minio_ingest import ingest_minio_to_qdrant
+from tools.prometheus_metrics import RAG_FINE_TUNE_RUNS_TOTAL
 
 load_dotenv()
 
@@ -34,7 +39,11 @@ async def forward(
                 system_promt=system_promt,
             )
         )
-        return QueryResponseDTO(text=research_results.text)
+        return QueryResponseDTO(
+            text=research_results.text,
+            query_id=research_results.query_id,
+            retrieved_doc_ids=research_results.retrieved_doc_ids,
+        )
 
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
@@ -96,8 +105,11 @@ async def get_stats(
 
 
 @router.get("/health")
-async def health_check() -> dict[str, str]:
-    return {"status": "ok"}
+async def health_check() -> dict:
+    return {
+        "status": "ok",
+        "embedding_model": get_embedding_model_status(),
+    }
 
 
 @router.post("/feedback")
@@ -116,3 +128,26 @@ async def submit_feedback(
         raise HTTPException(
             status_code=500, detail=f"Error processing feedback: {e}"
         )
+
+
+def verify_internal_token(x_internal_token: str = Header("")):
+    if x_internal_token != RAG_CONFIG.INTERNAL_API_TOKEN:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+
+@router.post("/admin/ingest/minio")
+async def ingest_from_minio(_: str = Depends(verify_internal_token)) -> dict:
+    """Internal endpoint used by Airflow to load parsed JSON objects into Qdrant."""
+    return ingest_minio_to_qdrant()
+
+
+@router.post("/admin/fine-tune-feedback")
+async def fine_tune_feedback(_: str = Depends(verify_internal_token)) -> dict:
+    """Internal endpoint used by Airflow to fine-tune the bi-encoder from feedback triplets."""
+    try:
+        result = fine_tune()
+        RAG_FINE_TUNE_RUNS_TOTAL.labels(status=result.get("status", "unknown")).inc()
+        return result
+    except Exception as e:
+        RAG_FINE_TUNE_RUNS_TOTAL.labels(status="failed").inc()
+        raise HTTPException(status_code=500, detail=f"Fine-tuning failed: {e}")
