@@ -1,0 +1,13 @@
+group,model,params,P@1,P@3,P@5,R@5
+Embedding,multilingual-e5-small,full document,0.45,0.22,0.17,0.85
+Embedding,MiniLM,full document,0.4,0.18,0.12,0.6
+Chunking,MiniLM,full document,0.4,0.18,0.12,0.6
+Chunking,MiniLM,title only,0.2,0.07,0.05,0.25
+Chunking,MiniLM,title + headings,0.1,0.05,0.03,0.15
+Chunk size,MiniLM,"1024 chars, overlap=50",0.4,0.17,0.11,0.55
+Chunk size,MiniLM,"512 chars, overlap=50",0.2,0.13,0.09,0.45
+Chunk size,MiniLM,"256 chars, overlap=50",0.15,0.12,0.08,0.4
+Overlap,MiniLM,"512 chars, overlap=0",0.15,0.07,0.05,0.25
+Overlap,MiniLM,"512 chars, overlap=50",0.2,0.13,0.09,0.45
+Overlap,MiniLM,"512 chars, overlap=100",0.25,0.17,0.12,0.6
+Overlap,MiniLM,"512 chars, overlap=200",0.25,0.13,0.08,0.4

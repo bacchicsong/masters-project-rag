@@ -1,0 +1,163 @@
+\documentclass[aspectratio=169,11pt]{beamer}
+\usetheme{Madrid}
+\usecolortheme{default}
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[russian]{babel}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{multimedia}
+
+\title{Финансовый помощник по инструментам Московской Биржи на основе RAG}
+\subtitle{Магистерский проект}
+\author{Охотин Даниил \and Ващин Леонид \and Гусев Владислав}
+\institute{НИУ ВШЭ}
+\date{2026}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}{Постановка задачи}
+  \textbf{Задача:} построить сервис, который отвечает на вопросы о финансовых инструментах и инвестиционных продуктах, опираясь на проверенный корпус материалов.
+
+  \vspace{0.4em}
+  \textbf{Цель:} уменьшить время поиска информации и снизить риск галлюцинаций за счет RAG: retrieval из Qdrant, rerank cross-encoder, генерация ответа GigaChat по найденному контексту.
+
+  \vspace{0.4em}
+  \textbf{Кому полезно:}
+  \begin{itemize}
+    \item начинающим инвесторам, которым нужен быстрый понятный ответ без чтения десятков статей;
+    \item клиентской поддержке и образовательным продуктам брокера, где важны единообразные ответы;
+    \item аналитикам и продакт-командам, которым нужно видеть вопросы пользователей и собирать feedback для улучшения базы знаний.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Описание данных}
+  \begin{itemize}
+    \item Основной корпус: 4\,795 чанков статей T-Bank и 7\,008 чанков теоретических материалов.
+    \item Golden set: 166 JSON-файлов с Q\&A по статьям; в экспериментах использовалась выборка из 20 запросов.
+    \item Пропусков текста в рабочих JSON-файлах не найдено.
+    \item Особенность корпуса T-Bank: много повторяющихся текстовых чанков (3\,790 дубликатов), что важно учитывать при retrieval и оценке.
+    \item Медианная длина чанка: T-Bank — 839 символов, теоретические тексты — 1\,031 символ.
+  \end{itemize}
+  \vspace{0.3em}
+  \centering
+  \textit{График распределения длин сохраняется ноутбуком: research/presentation\_assets/eda\_text\_lengths.png}
+\end{frame}
+
+\begin{frame}{EDA: ключевые выводы}
+  \begin{itemize}
+    \item Корпус неоднороден: статьи T-Bank короче и более повторяемы, теоретические документы длиннее и стабильнее по размеру чанков.
+    \item Из-за одного релевантного документа на запрос в golden set главной метрикой лучше считать Recall@K: важно, попал ли правильный источник в контекст.
+    \item Precision@K интерпретируется осторожно: при одном правильном документе максимум P@5 равен 0.2.
+    \item Слишком агрессивное чанкирование ухудшает качество: короткие фрагменты теряют контекст финансового понятия.
+    \item Для сервиса нужен rerank: dense retrieval дает кандидатов, но порядок top-1 нестабилен на близких финансовых терминах.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Метрики качества}
+  \textbf{Основная метрика: Recall@5.}
+  Она показывает, попал ли релевантный документ в пять первых результатов retrieval. Для RAG это критично: если правильного источника нет в контексте, генератор не сможет дать надежный ответ.
+
+  \vspace{0.5em}
+  \textbf{Дополнительные метрики:}
+  \begin{itemize}
+    \item Precision@1 — качество самого верхнего результата, важно для UX и доверия.
+    \item Precision@3 и Precision@5 — чистота контекста для генерации.
+    \item MRR — насколько высоко расположен первый релевантный документ.
+    \item Latency по этапам pipeline — production-метрика для FastAPI-сервиса.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Стартовое решение}
+  \begin{itemize}
+    \item Baseline: BM25 + bi-encoder, затем простая RAG-схема с подстановкой найденного контекста в LLM.
+    \item Bi-encoder baseline: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2.
+    \item На document-level retrieval MiniLM получил P@1 = 0.40 и R@5 = 0.60.
+    \item Качество стартового решения приемлемо для прототипа: в 60\% запросов правильная статья попадает в top-5, но top-1 ошибается слишком часто.
+    \item Поэтому дальнейшая работа была направлена на сравнение embedding-моделей, стратегий чанкинга и reranking.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{ML-эксперименты}
+  \small
+  \begin{tabularx}{\textwidth}{lXrrrr}
+    \toprule
+    Модель & Гиперпараметры & P@1 & P@3 & P@5 & R@5 \\
+    \midrule
+    e5-small & full document & 0.45 & 0.22 & 0.17 & \textbf{0.85} \\
+    MiniLM & full document & 0.40 & 0.18 & 0.12 & 0.60 \\
+    MiniLM & title only & 0.20 & 0.07 & 0.05 & 0.25 \\
+    MiniLM & title + headings & 0.10 & 0.05 & 0.03 & 0.15 \\
+    MiniLM & chunk 1024, overlap 50 & 0.40 & 0.17 & 0.11 & 0.55 \\
+    MiniLM & chunk 512, overlap 100 & 0.25 & 0.17 & 0.12 & 0.60 \\
+    \bottomrule
+  \end{tabularx}
+
+  \vspace{0.4em}
+  Лучший retrieval-результат среди измеренных экспериментов: multilingual-e5-small, document-level, R@5 = 0.85.
+\end{frame}
+
+\begin{frame}{DL-подходы и лучшая модель}
+  \begin{itemize}
+    \item Dense retrieval: sentence-transformers MiniLM и multilingual-e5-small.
+    \item Production reranking: cross-encoder/mmarco-mMiniLMv2-L12-H384-v1 поверх top-20 кандидатов из Qdrant.
+    \item Feedback loop: лайки/дизлайки превращаются в triplets для последующего дообучения bi-encoder.
+    \item Генерация ответа: GigaChat получает только найденный контекст и пользовательский вопрос.
+    \item Лучшая конфигурация проекта как сервиса: dense retrieval на e5-small или MiniLM + cross-encoder rerank + GigaChat. По offline retrieval-метрике лучший компонент retrieval — e5-small с R@5 = 0.85.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Сервисная часть}
+  \begin{itemize}
+    \item Реализован FastAPI-сервис с endpoint'ами /forward, /history, /stats, /health, /feedback.
+    \item Векторная база: Qdrant; загрузка корпуса выполняется через отдельный loader.
+    \item Пользовательский интерфейс: Telegram-бот с inline-кнопками feedback.
+    \item Инфраструктура: docker-compose поднимает app, qdrant, loader, minio, mlflow, prometheus и grafana.
+    \item RAG pipeline: encode query $\rightarrow$ Qdrant top-20 $\rightarrow$ cross-encoder top-10 $\rightarrow$ prompt to GigaChat.
+  \end{itemize}
+  \vspace{0.3em}
+  \centering
+  \textit{Для демонстрации сохранить 30--40 секунд как research/presentation\_assets/service\_demo.gif и вставить через multimedia.}
+  % \movie[width=0.75\textwidth,poster,showcontrols]{Demo}{presentation_assets/service_demo.mp4}
+\end{frame}
+
+\begin{frame}{Логирование и мониторинг}
+  \begin{itemize}
+    \item Логи пишутся в JSON Lines: timestamp, level, logger, message и дополнительные поля запроса.
+    \item Middleware добавляет request\_id, method, path, query, client\_ip, status\_code и duration\_ms.
+    \item Prometheus собирает HTTP-метрики FastAPI и кастомные метрики RAG pipeline.
+    \item Измеряются latency encode/search/rerank/GigaChat/end-to-end, число запросов, ошибки GigaChat и feedback labels.
+    \item Grafana provisioning хранится в репозитории: datasource Prometheus и dashboard FastAPI.
+    \item MLflow + MinIO используются для версионирования экспериментов, параметров, метрик и артефактов.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Распределение ролей}
+  \begin{itemize}
+    \item \textbf{Охотин Даниил:} baseline RAG, BM25 + bi-encoder, интеграция GigaChat, cross-encoder reranking, draft feedback loop и метрики.
+    \item \textbf{Ващин Леонид:} сбор и очистка данных, Q\&A golden set, работа с API-ключами и подготовка дополнительных материалов.
+    \item \textbf{Гусев Владислав:} FastAPI/Qdrant сервис, Docker-инфраструктура, Telegram feedback UI, логирование, тесты, мониторинг и интеграционные исправления.
+  \end{itemize}
+  \vspace{0.3em}
+  Разделение восстановлено по README, changelog и истории commit'ов; перед защитой стоит сверить формулировки с командой.
+\end{frame}
+
+\begin{frame}{Итоги}
+  \begin{itemize}
+    \item Собран корпус финансовых материалов и golden set для offline-оценки retrieval.
+    \item Реализованы baseline и эксперименты с embedding-моделями, стратегиями чанкинга и overlap.
+    \item Лучший offline retrieval: multilingual-e5-small, R@5 = 0.85 на тестовой выборке.
+    \item Собран production RAG-сервис: FastAPI + Qdrant + cross-encoder + GigaChat + Telegram-бот.
+    \item Добавлены feedback loop, JSON-логирование, Prometheus/Grafana monitoring и MLflow tracking.
+  \end{itemize}
+  \vspace{0.5em}
+  GitHub: \href{https://github.com/bacchicsong/masters-project-rag}{github.com/bacchicsong/masters-project-rag}
+\end{frame}
+
+\end{document}
