@@ -1,3 +1,4 @@
+import argparse
 import json
 import re
 import subprocess
@@ -5,10 +6,12 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 
 SEPARATOR = "=" * 72
 BOT_TOKEN_RE = re.compile(r"bot[0-9]+:[A-Za-z0-9_-]+")
+FEEDBACK_DIR = Path("data") / "feedback"
 
 
 def print_header(title: str):
@@ -251,26 +254,140 @@ def check_telegram_bot() -> bool:
         return False
 
 
-def main() -> int:
-    print_header("Service Health Check")
+def _count_jsonl(path: Path, required_fields: set[str]) -> tuple[bool, int]:
+    if not path.exists():
+        return True, 0
 
-    checks = [
-        ("FastAPI", check_fastapi()),
-        ("RAG readiness", check_rag_readiness()),
-        ("FastAPI metrics", check_http("FastAPI metrics", "http://localhost:8088/metrics")),
-        ("Qdrant health", check_http("Qdrant health", "http://localhost:6333/healthz")),
-        ("Qdrant collection", check_qdrant_collection()),
-        ("MinIO console", check_http("MinIO console", "http://localhost:9001")),
-        ("MinIO S3 API", check_http("MinIO S3 API", "http://localhost:9000", expected=(200, 403))),
-        ("Airflow health", check_http("Airflow health", "http://localhost:8080/health")),
-        ("MLflow", check_http("MLflow", "http://localhost:5000")),
-        ("Grafana", check_http("Grafana", "http://localhost:3000/api/health")),
-        ("Prometheus", check_http("Prometheus", "http://localhost:9090/-/healthy")),
-        ("Prometheus targets", check_prometheus_targets()),
-        ("Docker ps", check_docker_ps()),
-        ("FastAPI logs", check_fastapi_logs()),
-        ("Telegram bot", check_telegram_bot()),
-    ]
+    count = 0
+    with path.open("r", encoding="utf-8") as f:
+        for line_no, line in enumerate(f, 1):
+            line = line.strip()
+            if not line:
+                continue
+            count += 1
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError as exc:
+                print(f"  FAIL {path}:{line_no} invalid JSON: {exc}")
+                return False, count
+            missing = required_fields - set(payload)
+            if missing:
+                print(f"  FAIL {path}:{line_no} missing fields: {sorted(missing)}")
+                return False, count
+    return True, count
+
+
+def check_feedback_storage() -> bool:
+    print("- Feedback storage")
+    feedback_file = FEEDBACK_DIR / "feedback.jsonl"
+    events_file = FEEDBACK_DIR / "feedback_events.jsonl"
+
+    if not FEEDBACK_DIR.exists():
+        print(f"  WARN {FEEDBACK_DIR} does not exist yet; no user feedback has been saved")
+        return True
+
+    triplets_ok, triplet_count = _count_jsonl(
+        feedback_file,
+        {"query", "query_id", "positive_doc", "negative_doc", "timestamp"},
+    )
+    events_ok, event_count = _count_jsonl(
+        events_file,
+        {"query_id", "query", "answer", "liked", "timestamp", "triplets_created"},
+    )
+    if not triplets_ok or not events_ok:
+        return False
+
+    print(f"  OK events={event_count} triplets={triplet_count}")
+    if event_count == 0:
+        print("  WARN no feedback events yet; fine-tuning will skip until users rate answers")
+    elif triplet_count == 0:
+        print("  WARN feedback exists but no triplets yet; disliked answers may need relevant_doc_ids")
+    return True
+
+
+def check_fine_tuned_model_path() -> bool:
+    print("- Fine-tuned model path")
+    model_dir = Path("models") / "fine_tuned_bi_encoder"
+    docker_volume_note = "models_data:/app/models"
+    if model_dir.exists():
+        config_file = model_dir / "config_sentence_transformers.json"
+        print(f"  OK local model directory exists: {model_dir}")
+        if config_file.exists():
+            print(f"  OK sentence-transformers config found: {config_file}")
+        return True
+    print(
+        "  WARN fine-tuned model is not present yet; "
+        f"training job writes to Docker volume {docker_volume_note}"
+    )
+    return True
+
+
+def selected_checks(modes: list[str]):
+    check_groups = {
+        "runtime": [
+            ("FastAPI", check_fastapi),
+            ("RAG readiness", check_rag_readiness),
+            ("FastAPI metrics", lambda: check_http("FastAPI metrics", "http://localhost:8088/metrics")),
+            ("Qdrant health", lambda: check_http("Qdrant health", "http://localhost:6333/healthz")),
+            ("Qdrant collection", check_qdrant_collection),
+            ("MinIO console", lambda: check_http("MinIO console", "http://localhost:9001")),
+            ("MinIO S3 API", lambda: check_http("MinIO S3 API", "http://localhost:9000", expected=(200, 403))),
+            ("Feedback storage", check_feedback_storage),
+            ("Docker ps", check_docker_ps),
+            ("FastAPI logs", check_fastapi_logs),
+            ("Telegram bot", check_telegram_bot),
+        ],
+        "airflow": [
+            ("Airflow health", lambda: check_http("Airflow health", "http://localhost:8080/health")),
+            ("Docker ps", check_docker_ps),
+        ],
+        "observability": [
+            ("Prometheus", lambda: check_http("Prometheus", "http://localhost:9090/-/healthy")),
+            ("Prometheus targets", check_prometheus_targets),
+            ("Grafana", lambda: check_http("Grafana", "http://localhost:3000/api/health")),
+            ("Docker ps", check_docker_ps),
+        ],
+        "training": [
+            ("MLflow", lambda: check_http("MLflow", "http://localhost:5000")),
+            ("Feedback storage", check_feedback_storage),
+            ("Fine-tuned model path", check_fine_tuned_model_path),
+            ("Docker ps", check_docker_ps),
+        ],
+    }
+
+    if "all" in modes:
+        modes = ["runtime", "airflow", "observability", "training"]
+
+    checks = []
+    seen = set()
+    for mode in modes:
+        for name, check in check_groups[mode]:
+            key = (mode, name) if name != "Docker ps" else ("shared", name)
+            if key in seen:
+                continue
+            seen.add(key)
+            checks.append((name, check))
+    return checks
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Health checks for the RAG stack.")
+    parser.add_argument(
+        "--mode",
+        action="append",
+        choices=["runtime", "airflow", "observability", "training", "all"],
+        default=None,
+        help=(
+            "Check group to run. Can be repeated. "
+            "Default: runtime. Use --mode all for the full stack."
+        ),
+    )
+    args = parser.parse_args()
+    modes = args.mode or ["runtime"]
+
+    print_header(f"Service Health Check ({', '.join(modes)})")
+
+    checks = [(name, check()) for name, check in selected_checks(modes)]
 
     print_header("Summary")
     failed = [name for name, ok in checks if not ok]

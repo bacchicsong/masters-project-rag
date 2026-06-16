@@ -27,9 +27,11 @@ services:
       - MINIO_DATA_BUCKET=${MINIO_DATA_BUCKET:-rag-data}
       - MINIO_DATA_PREFIX=${MINIO_DATA_PREFIX:-parsed/}
       - USE_FINE_TUNED_MODEL=${USE_FINE_TUNED_MODEL:-false}
+      - FINE_TUNED_MODEL_PATH=/app/models/fine_tuned_bi_encoder
+      - FEEDBACK_DIR=/app/data/feedback
     volumes:
       - ./data:/app/data
-      - models_data:/models
+      - models_data:/app/models
       - hf_cache:/root/.cache/huggingface
     env_file:
       - .env
@@ -120,6 +122,8 @@ services:
   airflow-postgres:
     image: postgres:15
     container_name: airflow-postgres
+    profiles:
+      - airflow
     environment:
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
@@ -139,6 +143,8 @@ services:
       context: airflow
       dockerfile: Dockerfile
     container_name: airflow-init
+    profiles:
+      - airflow
     depends_on:
       airflow-postgres:
         condition: service_healthy
@@ -174,6 +180,8 @@ services:
       context: airflow
       dockerfile: Dockerfile
     container_name: airflow-webserver
+    profiles:
+      - airflow
     depends_on:
       airflow-init:
         condition: service_completed_successfully
@@ -202,6 +210,8 @@ services:
       context: airflow
       dockerfile: Dockerfile
     container_name: airflow-scheduler
+    profiles:
+      - airflow
     depends_on:
       airflow-init:
         condition: service_completed_successfully
@@ -220,6 +230,8 @@ services:
   prometheus:
     image: prom/prometheus:v2.53.0
     container_name: prometheus
+    profiles:
+      - observability
     ports:
       - "9090:9090"
     volumes:
@@ -234,6 +246,8 @@ services:
   grafana:
     image: grafana/grafana:11.1.0
     container_name: grafana
+    profiles:
+      - observability
     ports:
       - "3000:3000"
     environment:
@@ -253,6 +267,8 @@ services:
       context: .
       dockerfile: Dockerfile.mlflow
     container_name: mlflow
+    profiles:
+      - training
     ports:
       - "5000:5000"
     environment:
@@ -264,6 +280,28 @@ services:
     depends_on:
       - minio
       - minio-init
+    networks:
+      - app_network
+
+  fine-tune:
+    build:
+      context: src
+      dockerfile: Dockerfile
+    container_name: fine-tune
+    command: ["python", "/app/tools/fine_tune_bi_encoder.py"]
+    profiles:
+      - training
+    environment:
+      - PYTHONPATH=/app
+      - EMBEDDING_MODEL_NAME=${EMBEDDING_MODEL_NAME:-sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2}
+      - FINE_TUNED_MODEL_PATH=/app/models/fine_tuned_bi_encoder
+      - FEEDBACK_DIR=/app/data/feedback
+      - HF_HOME=/root/.cache/huggingface
+      - SENTENCE_TRANSFORMERS_HOME=/root/.cache/huggingface
+    volumes:
+      - ./data:/app/data
+      - models_data:/app/models
+      - hf_cache:/root/.cache/huggingface
     networks:
       - app_network
 

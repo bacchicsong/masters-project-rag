@@ -14,6 +14,7 @@
 """
 
 import sys
+import os
 from pathlib import Path
 
 # Add src to path so we can import infrastructure modules
@@ -30,8 +31,14 @@ from torch.utils.data import DataLoader
 
 from infrastructure.feedback.feedback_storage import FeedbackStorage
 
-EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-OUTPUT_PATH = str(Path(__file__).parent.parent.parent / "models" / "fine_tuned_bi_encoder")
+EMBEDDING_MODEL_NAME = os.getenv(
+    "EMBEDDING_MODEL_NAME",
+    "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+)
+OUTPUT_PATH = os.getenv(
+    "FINE_TUNED_MODEL_PATH",
+    str(SRC_DIR / "models" / "fine_tuned_bi_encoder"),
+)
 BATCH_SIZE = 32
 EPOCHS = 3
 WARMUP_STEPS = 100

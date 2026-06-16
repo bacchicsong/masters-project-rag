@@ -4,7 +4,9 @@ from pathlib import Path
 from typing import List, Dict, Optional
 from datetime import datetime
 
-FEEDBACK_DIR = Path(__file__).parent.parent.parent.parent / "data" / "feedback"
+FEEDBACK_DIR = Path(
+    os.getenv("FEEDBACK_DIR", Path.cwd() / "data" / "feedback")
+)
 FEEDBACK_FILE = FEEDBACK_DIR / "feedback.jsonl"
 FEEDBACK_EVENTS_FILE = FEEDBACK_DIR / "feedback_events.jsonl"
 

@@ -13,7 +13,10 @@ from config.config import RAG_CONFIG
 
 QDRANT_TIMEOUT = 180
 EMBEDDING_MODEL_NAME = RAG_CONFIG.EMBEDDING_MODEL_NAME
-FINE_TUNED_MODEL_PATH = str(Path(__file__).parent.parent.parent / "models" / "fine_tuned_bi_encoder")
+FINE_TUNED_MODEL_PATH = os.getenv(
+    "FINE_TUNED_MODEL_PATH",
+    str(Path(__file__).parent.parent.parent / "models" / "fine_tuned_bi_encoder"),
+)
 USE_FINE_TUNED = os.getenv("USE_FINE_TUNED_MODEL", "false").lower() == "true"
 MODEL_CACHE_FOLDER = os.getenv("SENTENCE_TRANSFORMERS_HOME") or None
 
